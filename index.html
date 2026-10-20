@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>人生機 — 一個人的一輩子</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --page:#E6E1D6;
+  --page2:#D8D2C4;
+  --ink:#2B2822;
+  --ink-soft:#6B6457;
+  --shell:#C3B6D8;
+  --shell-hi:#D6CCE6;
+  --shell-lo:#9C8EB6;
+  --shell-ink:#4A3F5C;
+  --btn:#F2ECE0;
+  --btn-lo:#CFC6B4;
+  --accent:#E8405F;
+  --accent-lo:#B32A44;
+  --lcd:#4A5B33;
+  --lcd-dim:#5E7044;
+  --lcd-glow:#C8DC6E;
+  --lcd-mid:#93A850;
+  --tape:#FBF6E9;
+  --tape-ink:#4A4336;
+  --tape-line:#DED5BF;
+  --shadow:rgba(60,50,40,.28);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --page:#17181B;
+    --page2:#202126;
+    --ink:#E8E4DB;
+    --ink-soft:#9A948A;
+    --shell:#8E82A6;
+    --shell-hi:#A79BBE;
+    --shell-lo:#5F5574;
+    --shell-ink:#1E1926;
+    --btn:#CFC8BC;
+    --btn-lo:#8D8778;
+    --tape:#E6DFCE;
+    --tape-ink:#433D31;
+    --tape-line:#CDC3AC;
+    --shadow:rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --page:#17181B; --page2:#202126; --ink:#E8E4DB; --ink-soft:#9A948A;
+  --shell:#8E82A6; --shell-hi:#A79BBE; --shell-lo:#5F5574; --shell-ink:#1E1926;
+  --btn:#CFC8BC; --btn-lo:#8D8778; --tape:#E6DFCE; --tape-ink:#433D31;
+  --tape-line:#CDC3AC; --shadow:rgba(0,0,0,.55);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--page);
+  background-image:radial-gradient(circle at 50% 0%,var(--page2),var(--page) 70%);
+  color:var(--ink);
+  font-family:"Noto Sans TC",system-ui,-apple-system,"Microsoft JhengHei",sans-serif;
+  min-height:100%;
+  padding:20px 14px 48px;
+}
+.wrap{max-width:1040px;margin:0 auto;display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;justify-content:center}
+
+/* ---------- 機身 ---------- */
+.machine{
+  flex:1 1 420px;max-width:520px;min-width:300px;
+  background:linear-gradient(170deg,var(--shell-hi),var(--shell) 45%,var(--shell-lo));
+  border-radius:38px 38px 46px 46px;
+  padding:16px 16px 20px;
+  box-shadow:0 18px 40px -12px var(--shadow),inset 0 2px 0 rgba(255,255,255,.5),inset 0 -6px 14px rgba(0,0,0,.18);
+  position:relative;
+}
+.brand{display:flex;align-items:center;justify-content:space-between;padding:2px 10px 12px;color:var(--shell-ink)}
+.brand .dots{display:flex;gap:6px}
+.brand .dots i{width:7px;height:7px;border-radius:50%;background:var(--shell-lo);box-shadow:inset 0 1px 1px rgba(0,0,0,.4)}
+.brand h1{margin:0;font-size:15px;font-weight:900;letter-spacing:.14em}
+.brand small{font-family:VT323,monospace;font-size:17px;opacity:.65;letter-spacing:.05em}
+
+/* ---------- 螢幕 ---------- */
+.screen{
+  background:var(--lcd);
+  border-radius:16px;
+  padding:12px 13px 10px;
+  position:relative;overflow:hidden;
+  box-shadow:inset 0 3px 14px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.4);
+  color:var(--lcd-glow);
+  min-height:330px;
+  display:flex;flex-direction:column;
+}
+.screen::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,.10) 0 1px,transparent 1px 3px);
+}
+.hud{display:flex;justify-content:space-between;align-items:baseline;font-family:VT323,monospace;font-size:22px;line-height:1}
+.hud .age b{font-size:34px;font-weight:400}
+.hud .who{font-family:"Noto Sans TC",sans-serif;font-size:12px;font-weight:700;letter-spacing:.08em;opacity:.8}
+.hud .cash{color:#fff;text-shadow:0 0 8px rgba(200,220,110,.5)}
+.yearbar{height:3px;background:rgba(0,0,0,.3);border-radius:2px;margin:7px 0 4px;overflow:hidden}
+.yearbar i{display:block;height:100%;width:0;background:var(--lcd-glow);opacity:.75}
+
+.scene{flex:1;display:flex;gap:12px;align-items:center;min-height:120px}
+.sprite{width:112px;flex:0 0 112px;animation:bob 2.6s ease-in-out infinite}
+.sprite svg{width:100%;display:block;filter:drop-shadow(0 0 6px rgba(200,220,110,.25))}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@media (prefers-reduced-motion:reduce){.sprite{animation:none}}
+
+.bars{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;min-width:0}
+.bar{font-size:10.5px;font-weight:700;letter-spacing:.06em}
+.bar span{display:flex;justify-content:space-between;opacity:.85;margin-bottom:2px}
+.bar span em{font-style:normal;font-family:VT323,monospace;font-size:14px}
+.bar i{display:block;height:6px;background:rgba(0,0,0,.32);border-radius:1px;overflow:hidden}
+.bar i b{display:block;height:100%;background:var(--lcd-glow);transition:width .45s ease}
+.bar.low i b{background:var(--accent)}
+
+.ticker{
+  border-top:1px dashed rgba(200,220,110,.3);margin-top:8px;padding-top:7px;
+  font-size:12px;line-height:1.55;min-height:58px;
+}
+.ticker p{margin:0 0 2px;opacity:.55}
+.ticker p:last-child{opacity:1;font-weight:500}
+.ticker p u{text-decoration:none;font-family:VT323,monospace;font-size:15px;margin-right:6px;opacity:.7}
+
+.family{display:flex;gap:4px;align-items:center;font-size:11px;margin-top:6px;opacity:.85;flex-wrap:wrap;min-height:16px}
+.family b{font-weight:700}
+
+/* ---------- 覆蓋層（事件／開始／結束） ---------- */
+.overlay{
+  position:absolute;inset:0;background:var(--lcd);z-index:5;
+  padding:16px 16px;display:none;flex-direction:column;justify-content:center;
+  animation:pop .22s ease-out;
+}
+.overlay.on{display:flex}
+@keyframes pop{from{transform:scale(.97);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.overlay{animation:none}}
+.overlay h2{margin:0 0 8px;font-size:17px;font-weight:900;letter-spacing:.04em}
+.overlay .kicker{font-family:VT323,monospace;font-size:16px;opacity:.6;letter-spacing:.1em;margin-bottom:2px}
+.overlay p.body{margin:0 0 14px;font-size:13px;line-height:1.7;opacity:.9}
+.choices{display:flex;flex-direction:column;gap:7px}
+.choices button{
+  text-align:left;font:inherit;font-size:13px;font-weight:500;cursor:pointer;
+  background:rgba(200,220,110,.1);color:var(--lcd-glow);
+  border:1px solid rgba(200,220,110,.45);border-radius:8px;padding:9px 11px;
+  transition:background .14s,transform .14s;
+}
+.choices button:hover{background:rgba(200,220,110,.24)}
+.choices button:active{transform:translateY(1px)}
+.choices button small{display:block;opacity:.6;font-size:11px;margin-top:2px;font-weight:400}
+.choices button:focus-visible,.ctrl:focus-visible,.focus-btn:focus-visible,.tape-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- 控制區 ---------- */
+.controls{padding:14px 4px 0}
+.row-speed{display:flex;gap:8px;align-items:center;margin-bottom:13px}
+.ctrl{
+  width:42px;height:42px;border-radius:50%;border:none;cursor:pointer;
+  background:linear-gradient(180deg,var(--btn),var(--btn-lo));
+  box-shadow:0 3px 0 var(--shell-lo),0 5px 8px rgba(0,0,0,.2);
+  color:var(--shell-ink);font-size:15px;font-weight:700;font-family:VT323,monospace;
+  display:grid;place-items:center;transition:transform .08s,box-shadow .08s;
+}
+.ctrl:active{transform:translateY(3px);box-shadow:0 0 0 var(--shell-lo)}
+.ctrl[aria-pressed="true"]{background:linear-gradient(180deg,var(--accent),var(--accent-lo));color:#fff}
+.ctrl.wide{width:auto;padding:0 14px;border-radius:21px;font-family:"Noto Sans TC",sans-serif;font-size:12px}
+.speed-label{margin-left:auto;font-size:11px;color:var(--shell-ink);font-weight:700;letter-spacing:.06em;opacity:.8}
+
+.focus-title{font-size:11px;font-weight:900;letter-spacing:.14em;color:var(--shell-ink);opacity:.75;margin:0 0 7px 2px}
+.focus-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.focus-btn{
+  font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:10px 4px;
+  border-radius:11px;border:1.5px solid transparent;
+  background:linear-gradient(180deg,var(--btn),var(--btn-lo));color:var(--shell-ink);
+  box-shadow:0 2px 0 var(--shell-lo);transition:transform .08s,box-shadow .08s;
+}
+.focus-btn:active{transform:translateY(2px);box-shadow:none}
+.focus-btn[aria-pressed="true"]{
+  background:linear-gradient(180deg,var(--accent),var(--accent-lo));color:#fff;
+  box-shadow:0 2px 0 var(--accent-lo),0 0 0 3px rgba(232,64,95,.22);
+}
+
+/* ---------- 紙帶 ---------- */
+.tape{
+  flex:1 1 300px;max-width:360px;min-width:260px;
+  background:var(--tape);color:var(--tape-ink);
+  border-radius:3px;padding:18px 18px 0;
+  box-shadow:0 14px 30px -14px var(--shadow);
+  position:relative;
+  font-size:12.5px;line-height:1.6;
+  -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 14px),transparent);
+  mask-image:linear-gradient(to bottom,#000 calc(100% - 14px),transparent);
+}
+.tape::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:7px;
+  background:repeating-linear-gradient(90deg,var(--page) 0 7px,transparent 7px 14px);
+}
+.tape h3{margin:8px 0 2px;font-size:12px;font-weight:900;letter-spacing:.18em}
+.tape .sub{margin:0 0 12px;font-size:11px;opacity:.6;border-bottom:1px dashed var(--tape-line);padding-bottom:10px}
+.tape-list{max-height:430px;overflow:auto;padding-bottom:26px;scrollbar-width:thin}
+.tape-list div{display:flex;gap:9px;padding:3px 0;border-bottom:1px dotted var(--tape-line)}
+.tape-list div u{text-decoration:none;font-family:VT323,monospace;font-size:15px;opacity:.55;flex:0 0 26px;text-align:right}
+.tape-list div.good u{color:#3E7A3E;opacity:1}
+.tape-list div.bad u{color:var(--accent-lo);opacity:1}
+.tape-list div.key{font-weight:700}
+.tape-empty{opacity:.5;padding:12px 0}
+
+/* ---------- 結束畫面 ---------- */
+.result .grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:12px;margin:10px 0 12px}
+.result .grid span{display:flex;justify-content:space-between;border-bottom:1px dotted rgba(200,220,110,.25);padding:2px 0}
+.result .grid span em{font-style:normal;font-family:VT323,monospace;font-size:16px}
+.result .score{font-family:VT323,monospace;font-size:44px;line-height:.9;color:#fff}
+.badges{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}
+.badges b{font-size:10.5px;font-weight:700;border:1px solid rgba(200,220,110,.5);border-radius:20px;padding:2px 8px}
+.tape-btn{
+  font:inherit;font-size:12px;font-weight:700;cursor:pointer;margin:10px 0 18px;
+  background:var(--accent);color:#fff;border:none;border-radius:20px;padding:9px 16px;
+}
+.hint{font-size:11px;color:var(--ink-soft);text-align:center;width:100%;margin:4px 0 0;line-height:1.7}
+.scroll-in{overflow:auto;max-height:100%}
+@media (max-width:720px){
+  .wrap{gap:16px}
+  .machine{max-width:100%}
+  .tape{max-width:100%}
+  .tape-list{max-height:260px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 機身 -->
+  <div class="machine">
+    <div class="brand">
+      <div class="dots"><i></i><i></i></div>
+      <h1>人生機</h1>
+      <small>LIFE-84</small>
+    </div>
+
+    <div class="screen" id="screen">
+      <div class="hud">
+        <div class="age"><b id="age">0</b> 歲 <span class="who" id="stageName">出生</span></div>
+        <div class="cash" id="cash">$0</div>
+      </div>
+      <div class="yearbar"><i id="yearbar"></i></div>
+
+      <div class="scene">
+        <div class="sprite" id="sprite"></div>
+        <div class="bars" id="bars"></div>
+      </div>
+
+      <div class="family" id="family"></div>
+
+      <div class="ticker" id="ticker"></div>
+
+      <!-- 事件覆蓋層 -->
+      <div class="overlay" id="event">
+        <div class="kicker" id="evAge">AGE 00</div>
+        <h2 id="evTitle"></h2>
+        <p class="body" id="evText"></p>
+        <div class="choices" id="evChoices"></div>
+      </div>
+
+      <!-- 開場 -->
+      <div class="overlay on scroll-in" id="startScreen">
+        <div class="kicker">NEW LIFE</div>
+        <h2 id="birthTitle">投胎中…</h2>
+        <p class="body" id="birthText">按下開始，隨機誕生成一個人。</p>
+        <div class="choices">
+          <button id="btnStart">開始這一生</button>
+          <button id="btnReroll">重新投胎 <small id="rerollLeft">還可以換 3 次</small></button>
+        </div>
+      </div>
+
+      <!-- 結局 -->
+      <div class="overlay result scroll-in" id="endScreen"></div>
+    </div>
+
+    <div class="controls">
+      <div class="row-speed">
+        <button class="ctrl" id="sp0" aria-pressed="false" title="暫停">❙❙</button>
+        <button class="ctrl" id="sp1" aria-pressed="true" title="正常速度">▶</button>
+        <button class="ctrl" id="sp2" aria-pressed="false" title="兩倍速">▶▶</button>
+        <button class="ctrl" id="sp4" aria-pressed="false" title="四倍速">▶▶▶</button>
+        <button class="ctrl wide" id="stepBtn" title="手動過一年">過一年</button>
+        <span class="speed-label" id="speedLabel">一年約 2.6 秒</span>
+      </div>
+      <p class="focus-title">這幾年的重心</p>
+      <div class="focus-grid" id="focusGrid"></div>
+    </div>
+  </div>
+
+  <!-- 紙帶 -->
+  <div class="tape">
+    <h3>人生紀事</h3>
+    <p class="sub" id="tapeSub">尚未出生</p>
+    <div class="tape-list" id="tapeList"><div class="tape-empty">這台機器會把每一年印出來。</div></div>
+  </div>
+
+  <p class="hint">選一個重心，時間就會自己往前走。心情歸零會出事，健康歸零會沒命。</p>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ===================== 像素小人 ===================== */
+const SPR = {
+baby:[
+"................","................","....########....","...##########...",
+"...##.####.##...","...##########...","...###o..o###...","....########....",
+".....o####o.....","...############.","..#.##########.#","..#.##########.#",
+"..#.##########.#","...############.","....##....##....","....##....##...."],
+child:[
+"................","....########....","...##########...","...##########...",
+"...##.####.##...","...##########...","....###..###....","....########....",
+".....o####o.....","...############.","..#.##..####.#..","..#.##..####.#..",
+"...############.",".....##..##.....",".....##..##.....","....###..###...."],
+teen:[
+"................","...#########....","..###########...","..###########...",
+"...##.####.##...","...##########...","....###..###....","....########....",
+".....o####o.....","..##############","..#.##########.#","..#.##########.#",
+"....##########..",".....##..##.....",".....##..##.....","....###..###...."],
+adult:[
+"................","....########....","...##########...","...##.####.##...",
+"...##########...","....###..###....","....########....",".....o####o.....",
+"..##############","..###..##..#####","..###..##..#####","..###.####.#####",
+"....##########..",".....##..##.....",".....##..##.....","....###..###...."],
+mid:[
+"................","....########....","...##########...","...##.####.##...",
+"...##########...","....##o..o##....","....########....",".....o####o.....",
+".##############.",".###..####..####",".##############.",".##############.",
+"..############..",".....##..##.....",".....##..##.....","....###..###...."],
+elder:[
+"................","...oooooooo.....","...##########...","...##.####.##...",
+"...##########...","....##o..o##....","....########....","....o######o....",
+"...##########.#.","..############.#","..############.#","...##########..#",
+"....##....##...#","....##....##...#","...###....###..#","...............#"]
+};
+function spriteSVG(key){
+  const g = SPR[key] || SPR.adult; let r = "";
+  for (let y=0;y<g.length;y++) for (let x=0;x<g[y].length;x++){
+    const c = g[y][x];
+    if (c === "#") r += '<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="currentColor"/>';
+    else if (c === "o") r += '<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="currentColor" opacity=".45"/>';
+  }
+  return '<svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">'+r+'</svg>';
+}
+
+/* ===================== 名字 ===================== */
+const SUR = "陳林黃張李王吳劉蔡楊許鄭謝郭洪曾邱廖賴徐周葉蘇莊呂江何蕭羅高".split("");
+const GIV_M = ["家豪","志明","宗翰","俊傑","建宏","冠廷","彥廷","柏翰","承恩","子軒","泓瑜","明翰","又嘉","哲宇"];
+const GIV_F = ["淑芬","雅婷","怡君","佩珊","欣怡","詩涵","宜蓁","曉彤","品妍","芷晴","惠敏","郁婷","心妤","映竹"];
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const rnd = (a,b) => a + Math.random()*(b-a);
+const ri = (a,b) => Math.floor(rnd(a,b+1));
+function makeName(sex){ return pick(SUR) + pick(sex==="M"?GIV_M:GIV_F); }
+
+/* ===================== 出身 ===================== */
+const ORIGINS = [
+  {k:"富",name:"含金湯匙",desc:"家裡在信義區有兩間房，爸媽的期待比房價還高。",money:600,w:8,
+   stats:{intel:8,charm:10,health:5},tag:"家境優渥"},
+  {k:"中",name:"標準小康",desc:"公教家庭，爸媽恩愛，晚餐七點準時開飯。",money:120,w:34,
+   stats:{mood:8,health:5},tag:"小康家庭"},
+  {k:"工",name:"工人家庭",desc:"爸爸跑工地，媽媽做早餐店，從小就很會看人臉色。",money:30,w:28,
+   stats:{fit:10,charm:5},tag:"刻苦出身"},
+  {k:"貧",name:"隔代教養",desc:"阿嬤帶大的孩子，廟口長大，有點野。",money:5,w:16,
+   stats:{fit:12,mood:-5,intel:-5},tag:"阿嬤帶大"},
+  {k:"書",name:"書香門第",desc:"家裡牆壁都是書，電視只能看公視。",money:200,w:14,
+   stats:{intel:15,charm:-5,fit:-5},tag:"書香門第"}
+];
+function rollOrigin(){
+  const tot = ORIGINS.reduce((s,o)=>s+o.w,0); let r = Math.random()*tot;
+  for (const o of ORIGINS){ r -= o.w; if (r<=0) return o; }
+  return ORIGINS[1];
+}
+
+/* ===================== 狀態 ===================== */
+const STAT_DEF = [
+  {k:"health",n:"健康"},{k:"intel",n:"智力"},
+  {k:"fit",n:"體能"},{k:"charm",n:"魅力"},
+  {k:"mood",n:"心情"},{k:"social",n:"人緣"}
+];
+let S = null, draft = null, rerolls = 3;
+
+function newState(origin, name, sex){
+  const st = {health:70,intel:50,fit:50,charm:50,mood:70,social:50};
+  for (const k in origin.stats) st[k] += origin.stats[k];
+  return {
+    name:name, sex:sex, origin:origin, age:0, alive:true,
+    st:st, money:origin.money,
+    focus:null, path:null, major:null, school:"一般", degree:"無",
+    job:null, retired:false, house:null,
+    partner:null, kids:[], exes:0,
+    log:[], badges:{}, flags:{}, seen:{},
+    debtYears:0
+  };
+}
+function clamp(v){ return Math.max(0, Math.min(100, v)); }
+function add(k, v){ S.st[k] = clamp(S.st[k] + v); }
+function money(v){ S.money += v; }
+function fmtMoney(m){
+  const v = Math.round(m);
+  if (Math.abs(v) >= 10000) return (v/10000).toFixed(2).replace(/\.?0+$/,"") + " 億";
+  return v + " 萬";
+}
+function badge(t){ S.badges[t] = true; }
+
+/* ===================== 階段 ===================== */
+function stageKey(){
+  const a = S.age;
+  if (S.retired) return "retire";
+  if (a < 3) return "baby";
+  if (a < 6) return "toddler";
+  if (a < 12) return "primary";
+  if (a < 15) return "junior";
+  if (a < 18) return "senior";
+  if (S.path === "uni" && a < 22) return "uni";
+  if (S.path === "grad" && a < 25) return "grad";
+  if (S.path === "abroad" && a < 24) return "abroad";
+  if (a < 18) return "senior";
+  return "work";
+}
+const STAGE_INFO = {
+  baby:   {n:"嬰兒期",  s:"baby"},
+  toddler:{n:"幼兒園",  s:"baby"},
+  primary:{n:"小學",    s:"child"},
+  junior: {n:"國中",    s:"teen"},
+  senior: {n:"高中",    s:"teen"},
+  uni:    {n:"大學",    s:"teen"},
+  grad:   {n:"研究所",  s:"adult"},
+  abroad: {n:"留學中",  s:"adult"},
+  work:   {n:"社會人",  s:"adult"},
+  retire: {n:"退休",    s:"elder"}
+};
+function spriteFor(){
+  const k = stageKey();
+  if (k === "work") return S.age >= 45 ? "mid" : "adult";
+  if (k === "retire") return "elder";
+  return STAGE_INFO[k].s;
+}
+
+/* ===================== 重心 ===================== */
+const FOCUS = {
+  "餵養照顧":{health:5,fit:3,mood:1},
+  "陪玩互動":{mood:7,charm:3,social:3,intel:1},
+  "早教啟蒙":{intel:6,mood:-4},
+  "用功讀書":{intel:5,mood:-3,fit:-1},
+  "運動放電":{fit:6,health:3,mood:2,intel:-1},
+  "打電動":{mood:8,intel:-1,fit:-3,social:2},
+  "學才藝":{charm:5,intel:2,mood:-1,cash:-6},
+  "運動健身":{fit:6,health:4,mood:1,charm:2},
+  "朋友社交":{social:6,charm:4,mood:4,intel:-2,cash:-4},
+  "偷偷戀愛":{charm:4,mood:5,intel:-3,cash:-4},
+  "打工賺錢":{cash:10,fit:-1,mood:-2,social:2},
+  "專心學業":{intel:6,mood:-3},
+  "社團活動":{social:6,charm:5,mood:4,intel:-1},
+  "談戀愛":{charm:3,mood:6,social:2,cash:-8},
+  "耍廢放空":{mood:7,intel:-3,fit:-3},
+  "拼事業":{mood:-5,health:-1.5,fit:-2,social:2},
+  "摸魚度日":{mood:4,fit:-1},
+  "進修充電":{intel:6,mood:-3,cash:-12},
+  "健身養生":{fit:6,health:5,charm:2,mood:1},
+  "陪伴家人":{mood:5,social:3,health:1},
+  "投資理財":{intel:1,mood:-1},
+  "養生保健":{health:4,fit:2,mood:2},
+  "到處旅遊":{mood:9,charm:2,health:1,cash:-45},
+  "含飴弄孫":{mood:7,social:3,health:1},
+  "重拾興趣":{mood:6,intel:3,charm:2,cash:-12}
+};
+const FOCUS_SETS = {
+  baby:   ["餵養照顧","陪玩互動","早教啟蒙"],
+  toddler:["餵養照顧","陪玩互動","早教啟蒙"],
+  primary:["用功讀書","運動放電","打電動","學才藝"],
+  junior: ["用功讀書","運動健身","朋友社交","偷偷戀愛","打工賺錢"],
+  senior: ["用功讀書","運動健身","朋友社交","偷偷戀愛","打工賺錢"],
+  uni:    ["專心學業","社團活動","打工賺錢","談戀愛","耍廢放空"],
+  grad:   ["專心學業","打工賺錢","談戀愛","健身養生"],
+  abroad: ["專心學業","打工賺錢","社團活動","耍廢放空"],
+  work:   ["拼事業","摸魚度日","進修充電","健身養生","陪伴家人","投資理財"],
+  retire: ["養生保健","到處旅遊","含飴弄孫","重拾興趣"]
+};
+
+/* ===================== 工作 ===================== */
+const JOBS = [
+  {t:"超商店員",     pay:36, pres:1, need:{}},
+  {t:"餐飲外場",     pay:38, pres:1, need:{}},
+  {t:"物流司機",     pay:52, pres:1, need:{fit:55}},
+  {t:"工地師傅",     pay:62, pres:2, need:{fit:65}},
+  {t:"行政助理",     pay:42, pres:2, need:{degree:"高中"}},
+  {t:"業務專員",     pay:58, pres:2, need:{charm:60}},
+  {t:"小學老師",     pay:66, pres:3, need:{degree:"大學",intel:65}},
+  {t:"軟體工程師",   pay:95, pres:3, need:{degree:"大學",intel:72,major:"理工"}},
+  {t:"會計師",       pay:88, pres:3, need:{degree:"大學",intel:72,major:"商管"}},
+  {t:"設計師",       pay:60, pres:3, need:{degree:"大學",charm:65,major:"藝術"}},
+  {t:"記者",         pay:50, pres:2, need:{degree:"大學",major:"文法"}},
+  {t:"公務員",       pay:68, pres:3, need:{degree:"大學",intel:70}},
+  {t:"醫師",         pay:170,pres:5, need:{degree:"大學",intel:88,major:"醫學"}},
+  {t:"大學教授",     pay:120,pres:5, need:{degree:"碩士",intel:85}},
+  {t:"研發主管",     pay:150,pres:4, need:{degree:"碩士",intel:80,major:"理工"}},
+  {t:"投資銀行",     pay:160,pres:4, need:{degree:"碩士",intel:80,major:"商管"}},
+  {t:"YouTuber",     pay:45, pres:2, need:{charm:70}}
+];
+const DEG_RANK = {"無":0,"高中":1,"大學":2,"碩士":3,"博士":4};
+function jobOK(j){
+  const n = j.need;
+  if (n.degree && DEG_RANK[S.degree] < DEG_RANK[n.degree]) return false;
+  if (n.intel && S.st.intel < n.intel) return false;
+  if (n.fit && S.st.fit < n.fit) return false;
+  if (n.charm && S.st.charm < n.charm) return false;
+  if (n.major && S.major !== n.major) return false;
+  return true;
+}
+function jobOptions(k){
+  const ok = JOBS.filter(jobOK).sort((a,b)=>b.pay-a.pay);
+  const out = ok.slice(0, k);
+  if (out.length < 2) out.push(JOBS[0]);
+  return out;
+}
+function takeJob(j){
+  S.job = {t:j.t, pay:j.pay, pres:j.pres, years:0};
+  if (j.pres >= 5) badge("人生勝利組");
+}
+
+/* ===================== 紀錄 ===================== */
+function logit(text, tone, key){
+  S.log.push({age:S.age, text:text, tone:tone||"", key:!!key});
+  renderTape(); renderTicker();
+}
+
+/* ===================== 事件：自動小事 ===================== */
+const married = () => S.partner && S.partner.married;
+const single  = () => !S.partner;
+const atWork  = () => stageKey() === "work" && S.job;
+const kidAged = (lo,hi) => S.kids.some(k => (S.age - k.born) >= lo && (S.age - k.born) <= hi);
+
+const AUTO = [
+  {w:3, when:()=>S.age>=3&&S.age<=12, t:"在公園跌了一跤，膝蓋縫了三針。", e:{health:-4,mood:-3}, tone:"bad"},
+  {w:3, when:()=>S.age>=7&&S.age<=18&&S.st.intel>62, t:"段考考了全班第一，爸媽把獎狀貼在冰箱上。", e:{intel:3,mood:5,social:2}, tone:"good"},
+  {w:2, when:()=>S.age>=7&&S.age<=15, t:"上課傳紙條被抓，罰站一整節。", e:{mood:-4,social:2}},
+  {w:2, when:()=>S.age>=6&&S.age<=18&&!S.flags.pet, t:"家裡多了一隻米克斯，取名叫咪咪。", e:{mood:9,social:3,cash:-6}, tone:"good", run:()=>{S.flags.pet=true;badge("養過狗");}},
+  {w:3, when:()=>S.age>=3&&S.age<=16, t:"過年紅包全被媽媽「保管」了。", e:{mood:-2,cash:2}},
+  {w:3, when:()=>S.st.health<75, t:"流感請了一週假，躺到天昏地暗。", e:{health:-4,mood:-2}},
+  {w:3, when:()=>S.age>=12&&S.age<=18&&single(), t:"暗戀的人轉學了，連名字都沒敢問。", e:{mood:-7,charm:1}, tone:"bad"},
+  {w:3, when:()=>S.age>=15&&S.age<=24, t:"熬夜打了一整個暑假的遊戲，視力掉了一百度。", e:{health:-4,mood:7,intel:-2,fit:-3}},
+  {w:2, when:()=>S.age>=15&&S.st.charm>65, t:"被街拍上傳到社群，意外爆紅三天。", e:{charm:6,social:6,mood:5}, tone:"good"},
+  {w:2, when:()=>S.age>=18, t:"統一發票中了兩百塊，開心了一整天。", e:{mood:3,cash:0.02}},
+  {w:3, when:()=>S.age>=23&&S.age<=45&&!S.house, t:"房東說要漲房租，而且還漲兩次。", e:{cash:-8,mood:-5}, tone:"bad"},
+  {w:3, when:()=>S.age>=35, t:"健檢報告出現紅字，醫生叫你少喝一點。", e:{health:-6,mood:-3}, tone:"bad"},
+  {w:3, when:()=>S.age>=28, t:"同學會，大家都在比小孩跟職稱。", e:{mood:4,social:5}},
+  {w:2, when:()=>S.age>=40&&S.age<=66&&!S.flags.parentSick, t:"爸媽住院開刀，你請了長假在醫院走廊睡。", e:{cash:-45,mood:-12,health:-3}, tone:"bad", run:()=>{S.flags.parentSick=true;}},
+  {w:3, when:()=>S.age>=55&&S.age<=78&&!S.flags.parentGone, t:"父親走了。回家的路突然變得很長。", e:{mood:-22}, tone:"bad", run:()=>{S.flags.parentGone=true;}},
+  {w:3, when:()=>S.age>=70, t:"又一個老朋友走了，通訊錄愈來愈短。", e:{mood:-9}, tone:"bad"},
+  {w:3, when:()=>S.age>=50, t:"腰閃到了，蹲下去撿東西要扶牆。", e:{health:-4,fit:-6}},
+  {w:3, when:()=>S.age>=38&&S.age<=58&&S.st.fit>30, t:"中年發福，褲子扣不起來。", e:{fit:-7,charm:-4,mood:-3}},
+  {w:3, when:()=>S.age>=25&&S.money>60, t:"股市大跌，帳面蒸發一截。", e:{mood:-6}, tone:"bad", run:()=>{money(-S.money*rnd(0.08,0.2));}},
+  {w:3, when:()=>S.age>=25&&S.money>60, t:"手上的股票莫名其妙噴出一根長紅。", e:{mood:6}, tone:"good", run:()=>{money(S.money*rnd(0.08,0.2));}},
+  {w:3, when:atWork, t:"專案做完被老闆公開表揚，獎金入帳。", e:{mood:7,social:3}, tone:"good", run:()=>{money(S.job.pay*0.2);}},
+  {w:3, when:()=>kidAged(15,22), t:"小孩考上了不錯的學校，你在群組裡炫耀了三天。", e:{mood:12,social:3}, tone:"good"},
+  {w:3, when:()=>kidAged(12,18), t:"小孩進入叛逆期，整天把門甩得很大聲。", e:{mood:-9}, tone:"bad"},
+  {w:3, when:()=>S.age>=58&&S.kids.some(k=>S.age-k.born>=26)&&!S.flags.grand, t:"當阿公阿嬤了，抱著孫子笑到合不攏嘴。", e:{mood:16,health:2}, tone:"good", run:()=>{S.flags.grand=true;badge("含飴弄孫");}},
+  {w:2, when:()=>married()&&S.partner.aff>70, t:"結婚紀念日，對方記得，你也記得。", e:{mood:8}, tone:"good", run:()=>{S.partner.aff=Math.min(100,S.partner.aff+6);}},
+  {w:2, when:()=>married()&&S.partner.aff<45, t:"為了誰洗碗吵了一架，冷戰三天。", e:{mood:-7}, tone:"bad", run:()=>{S.partner.aff-=6;}},
+  {w:2, when:()=>S.age>=20&&S.st.social>65, t:"朋友揪團出去玩，笑到肚子痛。", e:{mood:8,social:4,cash:-8}, tone:"good"},
+  {w:2, when:()=>S.age>=20&&S.st.social<30, t:"整年沒人約你，手機安靜得可怕。", e:{mood:-8}, tone:"bad"},
+  {w:2, when:()=>S.age>=16&&S.age<=70, t:"機車被偷了，警察說機會不大。", e:{cash:-9,mood:-6}, tone:"bad"}
+];
+
+/* ===================== 事件：選擇題 ===================== */
+const CHOICE = [
+  {id:"bully", w:6, when:()=>S.age>=4&&S.age<=11,
+   t:"被同學欺負了", d:"有人搶走你的點心，還笑你的鞋子很舊。",
+   c:[{l:"告訴老師", e:{mood:3,social:-4}, g:"老師處理了，但你被叫抓耙子。"},
+      {l:"忍下來不說", e:{mood:-8,intel:2}, g:"你學會把事情吞下去。"},
+      {l:"直接打回去", e:{fit:5,mood:4,social:-6,health:-3}, g:"兩個人一起被罰，但沒人再惹你。"}]},
+
+  {id:"talent", w:6, when:()=>S.age>=8&&S.age<=11&&!S.flags.talent,
+   t:"媽媽問你要學什麼", d:"每個同學都在補習班或才藝班，你也得挑一個。",
+   c:[{l:"鋼琴", e:{charm:10,intel:4,mood:-4,cash:-25}, g:"手指在琴鍵上磨出一輩子的習慣。", run:()=>{S.flags.talent="鋼琴";badge("會彈鋼琴");}},
+      {l:"籃球隊", e:{fit:14,health:6,social:6,intel:-3}, g:"每天練到天黑，皮膚曬成兩個色。", run:()=>{S.flags.talent="籃球";}},
+      {l:"寫程式", e:{intel:12,charm:-4,fit:-4,cash:-15}, g:"你在電腦前敲出第一個會動的東西。", run:()=>{S.flags.talent="程式";badge("小小工程師");}},
+      {l:"什麼都不學", e:{mood:8,fit:2}, g:"放學就去打電動，爽。"}]},
+
+  {id:"cram", w:6, when:()=>S.age>=12&&S.age<=14,
+   t:"要不要去補習", d:"全班一半以上的人晚上都在補習班。",
+   c:[{l:"砸錢去補", e:{intel:10,mood:-7,cash:-35}, g:"每天讀到十點半。"},
+      {l:"自己在家念", e:{intel:5,mood:-2}, g:"靠自己，也還可以。"},
+      {l:"根本不念", e:{mood:9,intel:-5,social:4}, g:"球場比教室有趣多了。"}]},
+
+  {id:"group", w:9, when:()=>S.age===16&&!S.flags.group,
+   t:"高二分組", d:"選自然組還是社會組，老師說這會決定你的一輩子（其實不會）。",
+   c:[{l:"自然組", e:{intel:7,mood:-4}, g:"物理化學地獄開始了。", run:()=>{S.flags.group="自然";}},
+      {l:"社會組", e:{charm:5,intel:4,mood:1}, g:"背的東西變多了，但下課有人聊天。", run:()=>{S.flags.group="社會";}},
+      {l:"轉去念高職", e:{fit:6,intel:-2,cash:12,mood:3}, g:"提早摸到真的機器跟真的錢。", run:()=>{S.flags.group="高職";S.flags.voc=true;}}]},
+
+  {id:"confess", w:8, when:()=>S.age>=15&&S.age<=23&&single(),
+   t:"有一個喜歡的人", d:"你們一起走了一學期的回家路，今天他／她好像在等你說什麼。",
+   c:[{l:"鼓起勇氣告白", e:{}, g:"", run:()=>{
+        const p = S.st.charm*0.55 + S.st.social*0.3 + 10;
+        if (Math.random()*100 < p){
+          S.partner = {name:makeName(S.sex==="M"?"F":"M"), aff:70, married:false, since:S.age, cheated:false};
+          add("mood",14); add("charm",4);
+          logit("告白成功，你們在一起了。對方叫"+S.partner.name+"。","good",true);
+        } else { add("mood",-14); add("charm",-3); logit("被發了好人卡，你在便利商店坐到半夜。","bad"); }
+      }},
+      {l:"維持朋友就好", e:{mood:-4,social:5}, g:"你們還是朋友，一直都是。"},
+      {l:"裝作什麼都沒發生", e:{mood:-7,intel:2}, g:"那條路後來你繞道走。"}]},
+
+  {id:"blind", w:5, when:()=>S.age>=26&&S.age<=40&&single(),
+   t:"長輩要幫你安排相親", d:"阿姨說對方是公務員，人很老實。",
+   c:[{l:"去看看", e:{}, g:"", run:()=>{
+        if (Math.random() < 0.55){
+          S.partner={name:makeName(S.sex==="M"?"F":"M"),aff:55,married:false,since:S.age,cheated:false};
+          add("mood",8); logit("意外聊得來，跟"+S.partner.name+"開始交往。","good",true);
+        } else { add("mood",-5); logit("兩個小時裡講了十句話，各自回家。","bad"); }
+      }},
+      {l:"推掉，等緣分", e:{mood:3,social:-2}, g:"你相信會遇到對的人。"},
+      {l:"直接說你不想結婚", e:{mood:5,social:-7}, g:"家族群組安靜了很久。", run:()=>{S.flags.nomarry=true;}}]},
+
+  {id:"propose", w:12, when:()=>S.partner&&!married()&&S.partner.aff>=62&&S.age>=24,
+   t:"要不要結婚", d:"在一起"+0+"年了，雙方家長開始問「什麼時候」。",
+   dyn:()=>"在一起 "+(S.age-S.partner.since)+" 年了，雙方家長開始問「什麼時候」。",
+   c:[{l:"求婚", e:{mood:16,cash:-60,social:6}, g:"", run:()=>{
+        S.partner.married=true; S.partner.aff=Math.min(100,S.partner.aff+12);
+        badge("結過婚"); logit("你跟"+S.partner.name+"結婚了。","good",true);
+      }},
+      {l:"再等等看", e:{mood:-4}, g:"「再說嘛」這三個字講了很多次。", run:()=>{S.partner.aff-=10;}},
+      {l:"其實沒那麼想要", e:{mood:-10}, g:"", run:()=>{
+        if (Math.random()<0.6){ logit("你們分手了。","bad",true); S.partner=null; S.exes++; add("mood",-12); }
+        else { S.partner.aff-=20; logit("話說開了，但有什麼東西裂了。","bad"); }
+      }}]},
+
+  {id:"kid", w:12, when:()=>married()&&S.age>=26&&S.age<=44&&S.kids.length<4,
+   t:"要生小孩嗎", d:"醫生說身體沒問題，問題只有「要不要」。",
+   c:[{l:"生", e:{mood:14,cash:-30,health:-4}, g:"", run:()=>{
+        const k={name:makeName(Math.random()<0.5?"M":"F"),born:S.age,bond:70};
+        S.kids.push(k); badge("當了爸媽");
+        logit("你的小孩"+k.name+"出生了。","good",true);
+      }},
+      {l:"再過幾年", e:{mood:1}, g:"房貸先還完再說。"},
+      {l:"決定不生", e:{mood:6,cash:20}, g:"兩個人的生活也很好。", run:()=>{S.flags.nokid=true;badge("頂客族");}}]},
+
+  {id:"house", w:8, when:()=>S.age>=28&&S.age<=52&&!S.house&&S.money>=200,
+   t:"看房子", d:"仲介帶你看了一整個週末，每一間都說「再不買就沒了」。",
+   c:[{l:"咬牙買市區", e:{mood:10,social:5}, g:"", run:()=>{S.house="市區";money(-Math.min(S.money*0.8,700));S.flags.loan=35;badge("有殼族");}},
+      {l:"買郊區大一點", e:{mood:8,health:3}, g:"", run:()=>{S.house="郊區";money(-Math.min(S.money*0.6,420));S.flags.loan=18;badge("有殼族");}},
+      {l:"繼續租", e:{mood:-3}, g:"錢留在手上比較踏實。"}]},
+
+  {id:"jump", w:8, when:()=>atWork()&&S.age>=26&&S.age<=55&&S.job.years>=3,
+   t:"獵頭來電", d:"對方開的薪水比現在高不少，但聽說加班很兇。",
+   c:[{l:"跳槽", e:{mood:-3,health:-3}, g:"", run:()=>{S.job.pay=Math.round(S.job.pay*rnd(1.25,1.6));S.job.years=0;logit("換了公司，薪水變成年薪 "+S.job.pay+" 萬。","good");}},
+      {l:"留下來談加薪", e:{}, g:"", run:()=>{
+        if (S.st.charm+S.st.intel > 130){ S.job.pay=Math.round(S.job.pay*1.15); add("mood",5); logit("加薪談成了。","good"); }
+        else { add("mood",-7); logit("老闆說「再看看」，然後就沒有然後。","bad"); }
+      }},
+      {l:"乾脆創業", e:{mood:4,health:-6}, g:"", run:()=>{
+        const cost=Math.min(S.money*0.7,300); money(-cost);
+        if (Math.random()<0.35){ S.job={t:"創業老闆",pay:Math.round(rnd(150,400)),pres:4,years:0}; badge("創業成功"); logit("公司活下來了，而且賺錢。","good",true); }
+        else { S.job.pay=Math.round(S.job.pay*0.7); S.job.years=0; add("mood",-12); logit("燒完積蓄收攤，回去當員工。","bad",true); }
+      }}]},
+
+  {id:"affair", w:7, when:()=>married()&&S.age>=30&&S.age<=58&&S.st.mood<60,
+   t:"有人對你很好", d:"同事最近常找你吃飯，說的話剛好都是你在家聽不到的。",
+   c:[{l:"越線", e:{mood:10,charm:4}, g:"", run:()=>{
+        S.partner.cheated=true; badge("出軌過");
+        if (Math.random()<0.55){ logit("事情被發現了。家裡的燈再也沒有為你留。","bad",true); S.partner.aff-=55; }
+        else { logit("沒有人發現，但你開始怕手機震動。","bad"); add("mood",-6); }
+      }},
+      {l:"保持距離", e:{mood:-5,intel:3}, g:"你換了午餐時間。"},
+      {l:"回家好好談", e:{mood:6}, g:"", run:()=>{S.partner.aff=Math.min(100,S.partner.aff+14);logit("你們聊了一整晚，像剛認識的時候。","good");}}]},
+
+  {id:"caught", w:5, when:()=>married()&&S.age>=32&&S.partner.aff<55,
+   t:"你發現了一些訊息", d:"對方的手機在桌上亮了一下，名字你沒看過。",
+   c:[{l:"攤牌離婚", e:{mood:-18}, g:"", run:()=>{divorce(true);}},
+      {l:"選擇原諒", e:{mood:-10}, g:"", run:()=>{S.partner.aff+=8;logit("你說沒關係，但心裡記了一筆。","bad");}},
+      {l:"假裝沒看到", e:{mood:-14,intel:2}, g:"日子照過，只是你再也沒笑過那麼大聲。"}]},
+
+  {id:"layoff", w:6, when:()=>atWork()&&S.age>=35&&S.age<=58,
+   t:"公司要裁員", d:"HR 約你下午三點，會議室窗簾是拉上的。",
+   c:[{l:"接受資遣", e:{mood:-10}, g:"", run:()=>{money(S.job.pay*0.8);S.job=null;logit("領了資遣費，開始找工作。","bad",true);}},
+      {l:"爭取留下", e:{mood:-6,health:-3}, g:"", run:()=>{
+        if (S.st.intel+S.st.social>120){ S.job.pay=Math.round(S.job.pay*0.9); logit("保住工作，但降了薪。","bad"); }
+        else { money(S.job.pay*0.6); S.job=null; logit("還是被請走了。","bad",true); }
+      }},
+      {l:"趁機轉行", e:{mood:3,intel:4}, g:"", run:()=>{S.job=null;S.flags.switching=true;logit("決定做一直想做的事。");}}]},
+
+  {id:"scam", w:5, when:()=>S.age>=22,
+   t:"接到一通電話", d:"對方說你的帳戶涉及洗錢，要你立刻把錢轉到「安全帳戶」。",
+   c:[{l:"照做", e:{mood:-16}, g:"", run:()=>{const l=Math.min(S.money*0.6,500);money(-l);logit("被詐騙了 "+fmtMoney(l)+"。","bad",true);}},
+      {l:"直接掛掉", e:{mood:2,intel:2}, g:"你連聽都懶得聽完。"},
+      {l:"報警並錄音", e:{mood:4,social:4,intel:3}, g:"警察說你很冷靜。", run:()=>{badge("反詐騙達人");}}]},
+
+  {id:"health", w:7, when:()=>S.age>=45&&S.st.health<58,
+   t:"醫生叫你坐下來談", d:"報告上有一個你看不懂但他表情很嚴肅的數字。",
+   c:[{l:"認真治療、改作息", e:{health:16,mood:-5,cash:-80,fit:5}, g:"你戒掉了很多東西。"},
+      {l:"工作比較要緊", e:{health:-14,mood:-4}, g:"", run:()=>{if(S.job)money(S.job.pay*0.3);}},
+      {l:"去找偏方", e:{cash:-40,mood:3}, g:"", run:()=>{add("health",Math.random()<0.3?6:-12);}}]},
+
+  {id:"invest", w:6, when:()=>S.age>=25&&S.money>=120,
+   t:"朋友報了一支明牌", d:"他說這次穩的，上次也是這樣說。",
+   c:[{l:"重押", e:{mood:-2}, g:"", run:()=>{
+        const amt=S.money*0.6;
+        if (Math.random()<0.4){ money(amt*rnd(0.8,2.2)); add("mood",14); logit("賭對了，資產翻了一輪。","good",true); }
+        else { money(-amt); add("mood",-16); logit("全套在最高點。","bad",true); }
+      }},
+      {l:"小買一點", e:{}, g:"", run:()=>{const amt=S.money*0.15;money(Math.random()<0.5?amt*0.9:-amt*0.6);logit("小賺小賠，無傷大雅。");}},
+      {l:"不碰", e:{mood:2,intel:2}, g:"你把錢放定存。"}]},
+
+  {id:"gap", w:4, when:()=>S.age>=28&&S.age<=48&&S.money>=250&&atWork(),
+   t:"你突然很想消失一年", d:"機票打開了又關掉，關掉了又打開。",
+   c:[{l:"辭職去旅行", e:{mood:26,charm:8,health:4,intel:5}, g:"", run:()=>{money(-200);S.job=null;badge("環遊世界");logit("你去了十四個國家，回來什麼都不一樣了。","good",true);}},
+      {l:"只請兩週假", e:{mood:11,cash:-45}, g:"至少看到了海。"},
+      {l:"算了，明年再說", e:{mood:-6}, g:"明年你又說了一次明年。"}]},
+
+  {id:"kidart", w:5, when:()=>kidAged(16,18),
+   t:"小孩說想念藝術", d:"他拿著作品集站在客廳，等你說話。",
+   c:[{l:"支持他", e:{mood:8,cash:-60}, g:"", run:()=>{S.kids.forEach(k=>k.bond=Math.min(100,k.bond+15));badge("開明家長");}},
+      {l:"叫他先念個穩的", e:{mood:-5}, g:"", run:()=>{S.kids.forEach(k=>k.bond-=18);}},
+      {l:"折衷：念書也讓他畫", e:{mood:4,cash:-25}, g:"週末送他去畫室。"}]},
+
+  {id:"retire", w:14, when:()=>S.age>=60&&S.age<=68&&!S.retired&&S.job,
+   t:"該退休了嗎", d:"同期的人陸續辦了退休，你還在開早會。",
+   c:[{l:"退休", e:{mood:14,health:4}, g:"", run:()=>{S.retired=true;S.job=null;badge("順利退休");logit("最後一天，你把桌上的盆栽帶回家。","good",true);}},
+      {l:"再做幾年", e:{mood:-5,health:-5}, g:"", run:()=>{if(S.job)money(S.job.pay*1.2);}},
+      {l:"轉當顧問", e:{mood:6,health:-2}, g:"", run:()=>{S.job={t:"顧問",pay:Math.round(S.job.pay*0.5),pres:3,years:0};}}]},
+
+  {id:"will", w:6, when:()=>S.age>=72,
+   t:"律師問你遺囑怎麼寫", d:"這件事拖很久了，今天總算坐下來。",
+   c:[{l:"全部留給家人", e:{mood:8}, g:"", run:()=>{S.flags.will="家人";S.kids.forEach(k=>k.bond=Math.min(100,k.bond+10));}},
+      {l:"捐出去", e:{mood:12,social:8}, g:"", run:()=>{S.flags.will="捐贈";badge("留下善款");}},
+      {l:"趁活著全部花掉", e:{mood:16,health:3}, g:"", run:()=>{money(-S.money*0.9);S.flags.will="花光";badge("及時行樂");}}]}
+];
+
+/* ===================== 里程碑 ===================== */
+function milestone(){
+  const a = S.age;
+  if (a===1) { logit("你會走路了，第一步就撲進沙發。","good"); return null; }
+  if (a===3) return {
+    t:"要上幼兒園了", d:"家附近有三種選擇，媽媽在聯絡簿上寫了好久。",
+    c:[{l:"公立幼兒園", e:{mood:5,social:5}, g:"同學很多，老師很兇但很好。"},
+       {l:"雙語私立", e:{intel:10,charm:5,mood:-4,cash:-80}, g:"你三歲就會說 apple。", run:()=>{badge("雙語寶寶");}},
+       {l:"阿嬤顧就好", e:{mood:8,health:4,intel:-5,cash:15}, g:"每天跟阿嬤去市場。"}]};
+  if (a===6) { logit("背起書包上小學，書包比你還重。",null,true); return null; }
+  if (a===12){ logit("升上國中，制服永遠大一號。",null,true); return null; }
+  if (a===15) return exam15();
+  if (a===18) return exam18();
+  if (a===22 && S.path==="uni") return afterUni();
+  if (a===24 && (S.path==="grad"||S.path==="abroad")) return afterGrad();
+  if (a>=18 && stageKey()==="work" && !S.job && !S.retired) return findJob();
+  return null;
+}
+function exam15(){
+  const sc = S.st.intel + rnd(-12,12);
+  let school, eff;
+  if (sc>78){ school="第一志願"; eff={mood:14,social:5}; }
+  else if (sc>58){ school="社區高中"; eff={mood:5}; }
+  else { school="高職"; eff={mood:-3,fit:4}; S.flags.voc=true; }
+  S.school = school;
+  return {t:"會考成績出來了", d:"你的分數落在 "+school+"。全家圍著電腦看榜單。",
+    c:[{l:"接受，去念 "+school, e:eff, g:"新制服比舊制服好看一點。"}]};
+}
+function exam18(){
+  S.degree = "高中";
+  const sc = S.st.intel + (S.school==="第一志願"?10:0) + rnd(-10,10);
+  const opts = [];
+  if (sc > 55) opts.push({l:"考上大學，去念", e:{mood:10}, g:"", run:()=>{S.path="uni";chooseMajor();}});
+  else opts.push({l:"分數只夠私立科大", e:{mood:2,cash:-30}, g:"", run:()=>{S.path="uni";S.flags.privateUni=true;chooseMajor();}});
+  if (sc > 72) opts.push({l:"申請出國念書", e:{intel:8,charm:8,mood:6,cash:-350}, g:"", run:()=>{S.path="abroad";S.major=pick(["理工","商管","文法","藝術"]);badge("留過學");logit("你一個人拖著行李到了很遠的地方。",null,true);}});
+  opts.push({l:"不念了，直接工作", e:{mood:-2,fit:4}, g:"", run:()=>{S.path="work";logit("十八歲開始上班，同學還在補習。",null,true);}});
+  opts.push({l:"重考一年拚看看", e:{mood:-12,intel:9,cash:-45}, g:"", run:()=>{S.path="uni";S.flags.repeat=true;badge("重考過");}});
+  return {t:"學測放榜", d:"級分單在手上，整個人生好像被印成一張紙。", c:opts};
+}
+function chooseMajor(){
+  pending = {t:"要念哪個科系", d:"選填志願的那一晚，你一直在改順序。",
+    c:[{l:"理工", e:{intel:8,mood:-3}, g:"實驗室的燈比宿舍亮。", run:()=>{S.major="理工";}},
+       {l:"商管", e:{charm:6,social:6,intel:3}, g:"簡報做到會做夢。", run:()=>{S.major="商管";}},
+       {l:"文法", e:{intel:6,charm:4,mood:2}, g:"讀了很多別人覺得沒用的書。", run:()=>{S.major="文法";}},
+       {l:"藝術設計", e:{charm:10,mood:5,intel:2,cash:-30}, g:"你的作品被貼在系館走廊。", run:()=>{S.major="藝術";}},
+       S.st.intel>82 ? {l:"醫學系", e:{intel:10,mood:-10,health:-4}, g:"接下來七年你沒什麼假。", run:()=>{S.major="醫學";badge("醫學生");}} : null
+      ].filter(Boolean)};
+}
+function afterUni(){
+  S.degree = "大學";
+  const opts = [{l:"直接找工作", e:{}, g:"", run:()=>{S.path="work";}}];
+  if (S.st.intel>62) opts.push({l:"念研究所", e:{intel:10,mood:-5,cash:-60}, g:"", run:()=>{S.path="grad";badge("研究所");}});
+  opts.push({l:"考公職", e:{intel:6,mood:-8,cash:-30}, g:"", run:()=>{
+    if (S.st.intel>68){ S.path="work"; takeJob({t:"公務員",pay:68,pres:3}); logit("考上了，鐵飯碗到手。","good",true); }
+    else { S.path="work"; add("mood",-10); logit("考了兩年沒上，先去找工作。","bad",true); }
+  }});
+  if (S.st.charm>70) opts.push({l:"當全職創作者", e:{mood:10,charm:6}, g:"", run:()=>{S.path="work";takeJob({t:"YouTuber",pay:45,pres:2});}});
+  return {t:"大學畢業了", d:"撥穗那天雨很大，你突然不知道明天要幹嘛。", c:opts};
+}
+function afterGrad(){
+  S.degree = S.path==="abroad" ? "碩士" : "碩士";
+  S.path = "work";
+  if (S.st.intel>88 && Math.random()<0.45) return {
+    t:"教授問你要不要念博士", d:"他說你是這幾年最好的學生之一。",
+    c:[{l:"念下去", e:{intel:12,mood:-12,cash:-40}, g:"", run:()=>{S.degree="博士";badge("博士");logit("又多讀了四年，頭髮少了一些。",null,true);}},
+       {l:"先去工作", e:{mood:5}, g:"你想先賺點錢。"}]};
+  logit("碩士畢業，履歷終於可以寫滿一頁。",null,true);
+  return null;
+}
+function findJob(){
+  const opts = jobOptions(3).map(j => ({
+    l:j.t+"（年薪 "+j.pay+" 萬）", e:{}, g:"", run:()=>{takeJob(j);logit("開始當"+j.t+"。",null,true);}
+  }));
+  opts.push({l:"再休息一陣子", e:{mood:6,cash:-20}, g:"你說你在沉澱。"});
+  return {t:"找工作", d:"投了四十幾封履歷，有回音的有這幾個。", c:opts};
+}
+
+/* ===================== 離婚 ===================== */
+function divorce(blame){
+  if (!S.partner) return;
+  const n = S.partner.name;
+  money(-S.money*0.45);
+  add("mood",-20); S.exes++; badge("離過婚");
+  S.kids.forEach(k => { k.bond -= 12; });
+  S.partner = null;
+  logit("你跟"+n+"離婚了。房子裡少了一半的東西。","bad",true);
+}
+
+/* ===================== 年度推進 ===================== */
+let pending = null;
+
+function applyEff(e){
+  if (!e) return;
+  for (const k in e){
+    if (k === "cash") money(e[k]); else if (S.st[k] !== undefined) add(k, e[k]);
+  }
+}
+function yearlyFocus(){
+  const f = S.focus; if (!f || !FOCUS[f]) return;
+  const e = FOCUS[f];
+  for (const k in e){ if (k==="cash") money(e[k]); else add(k, e[k]); }
+  if (f === "打工賺錢" || f === "拼事業" || f === "摸魚度日") { /* 收入另計 */ }
+  if (f === "投資理財" && S.money > 0){
+    const r = rnd(-0.21, 0.26) + (S.st.intel-50)/900;
+    money(S.money * r);
+  }
+  if (f === "談戀愛" || f === "偷偷戀愛" || f === "陪伴家人"){
+    if (S.partner) S.partner.aff = Math.min(100, S.partner.aff + 9);
+    S.kids.forEach(k => k.bond = Math.min(100, k.bond + 8));
+  }
+  if (f === "含飴弄孫") S.kids.forEach(k => k.bond = Math.min(100, k.bond + 5));
+}
+function yearlyEconomy(){
+  const k = stageKey();
+  if (k === "work" && S.job){
+    let mul = S.focus === "拼事業" ? 1.25 : S.focus === "摸魚度日" ? 0.95 : 1;
+    money(S.job.pay * mul);
+    S.job.years++;
+    const pr = (S.focus === "拼事業" ? 0.30 : 0.12) + (S.st.intel+S.st.social)/900;
+    if (S.job.years >= 3 && Math.random() < pr){
+      S.job.pay = Math.round(S.job.pay * rnd(1.08, 1.22));
+      S.job.years = 1; logit("升職加薪，年薪變 "+S.job.pay+" 萬。","good");
+    }
+    if (S.focus === "摸魚度日" && Math.random() < 0.07){
+      logit("被委婉地請走了。","bad",true); S.job = null;
+    }
+  }
+  if (k === "retire") money(rnd(18, 32));
+  // 生活開銷
+  let cost = 0;
+  if (S.age >= 18) cost += 26;
+  cost += S.kids.filter(kd => S.age - kd.born < 24).length * 16;
+  if (S.flags.loan > 0){ cost += 42; S.flags.loan--; if (S.flags.loan===0) logit("房貸終於繳完了。","good",true); }
+  money(-cost);
+  if (S.money < 0){
+    S.debtYears++; add("mood", -6);
+    if (S.debtYears === 3) logit("帳單堆成一疊，你開始算哪一張可以晚點繳。","bad");
+  } else S.debtYears = 0;
+}
+function yearlyDrift(){
+  const a = S.age;
+  if (a > 35) add("health", -((a-35)/22));
+  if (a > 58) add("fit", -1);
+  // 體能會往久坐的基準線回歸：不練會掉，練太兇也有天花板
+  S.st.fit = clamp(S.st.fit + (34 - S.st.fit) * 0.08);
+  if (S.st.fit < 35) add("health", -0.8);
+  if (S.st.fit > 70) add("health", 0.8);
+  // 年輕的身體會自己修回來
+  if (a < 45 && S.st.health < 72) add("health", 2.4);
+  else if (a < 62 && S.st.health < 50) add("health", 1.2);
+  // 心情回歸
+  S.st.mood += (58 - S.st.mood) * 0.07;
+  if (S.st.health < 35) add("mood", -3);
+  if (S.money < 0) add("mood", -2);
+  // 感情自然衰退
+  if (S.partner){
+    const f = S.focus;
+    if (f !== "陪伴家人" && f !== "談戀愛" && f !== "偷偷戀愛") S.partner.aff -= rnd(1.5, 4);
+    if (S.partner.married && S.partner.aff < 15 && Math.random() < 0.45) divorce(false);
+    else if (!S.partner.married && S.partner.aff < 18){
+      logit("你們淡掉了，最後一則訊息沒人回。","bad",true); S.partner = null; S.exes++;
+    }
+  }
+  S.kids.forEach(k => { if (S.age - k.born > 20) k.bond -= 1; });
+}
+function crisisCheck(){
+  if (S.st.mood <= 2 && !S.flags.burnt){
+    S.flags.burnt = true;
+    pending = {t:"你撐不下去了", d:"某個早上你坐在床邊，發現自己完全起不來。",
+      c:[{l:"去看醫生，請長假", e:{mood:36,health:6,cash:-50}, g:"", run:()=>{if(S.job&&Math.random()<0.5){S.job=null;logit("離開了那份工作。","bad");}badge("走出低潮");}},
+         {l:"硬撐過去", e:{mood:16,health:-14}, g:"你沒告訴任何人。"},
+         {l:"回家住一陣子", e:{mood:30,cash:-10,social:4}, g:"媽媽什麼都沒問，只是多煮了一道菜。"}]};
+    return true;
+  }
+  if (S.st.mood > 20) S.flags.burnt = false;
+  return false;
+}
+function deathCheck(){
+  if (S.st.health <= 0){ die("身體先走一步，你撐到最後一刻。"); return true; }
+  if (S.age < 45) {
+    if (Math.random() < 0.0006) { die("一場意外，沒有任何預告。"); return true; }
+    return false;
+  }
+  const base = Math.pow((S.age - 44) / 52, 3) * 0.5;
+  const mod = 1 + (62 - S.st.health) / 45;
+  if (Math.random() < base * Math.max(0.3, mod)) {
+    die(S.age > 85 ? "在睡夢中離開，很安靜。" : "身體終究不聽話了。");
+    return true;
+  }
+  if (S.age >= 104){ die("活到一百零四歲，報紙來採訪過兩次。"); return true; }
+  return false;
+}
+
+function advanceYear(){
+  if (!S.alive) return;
+  S.age++;
+  yearlyFocus();
+  yearlyEconomy();
+  yearlyDrift();
+
+  const m = milestone();
+  if (m) { pending = m; }
+  else if (!crisisCheck()){
+    // 選擇事件
+    if (Math.random() < 0.32){
+      const pool = CHOICE.filter(e => (!S.seen[e.id] || e.id==="invest"||e.id==="scam"||e.id==="affair") && safe(e.when));
+      if (pool.length){
+        const ev = weighted(pool);
+        S.seen[ev.id] = true;
+        pending = {t:ev.t, d:ev.dyn?ev.dyn():ev.d, c:ev.c};
+      }
+    }
+    if (!pending && Math.random() < 0.5){
+      const pool = AUTO.filter(e => safe(e.when));
+      if (pool.length){
+        const ev = weighted(pool);
+        applyEff(ev.e); if (ev.run) ev.run();
+        logit(ev.t, ev.tone);
+      }
+    }
+  }
+  render();
+  if (deathCheck()) return;
+  if (pending) openEvent();
+}
+function safe(fn){ try { return !!fn(); } catch(e){ return false; } }
+function weighted(pool){
+  const tot = pool.reduce((s,e)=>s+(e.w||1),0); let r = Math.random()*tot;
+  for (const e of pool){ r -= (e.w||1); if (r<=0) return e; }
+  return pool[0];
+}
+
+/* ===================== 結局 ===================== */
+function die(reason){
+  S.alive = false; S.deathReason = reason;
+  speed = 0; syncSpeedBtns();
+  logit("享年 "+S.age+" 歲。"+reason, "bad", true);
+  showEnd();
+}
+function score(){
+  const st = S.st;
+  let v = st.health*0.8 + st.intel*0.9 + st.fit*0.6 + st.charm*0.6 + st.mood*1.8 + st.social*0.8;
+  v += Math.min(Math.max(S.money,0), 6000) / 22;
+  v += S.kids.length * 22 + S.kids.reduce((s,k)=>s+k.bond*0.12, 0);
+  if (married()) v += 45;
+  if (S.job) v += S.job.pres * 9;
+  v += DEG_RANK[S.degree] * 12;
+  v += S.age * 1.2;
+  v += Object.keys(S.badges).length * 10;
+  v -= S.exes * 14;
+  return Math.max(0, Math.round(v));
+}
+function verdict(v){
+  if (v > 900) return "一生難得";
+  if (v > 760) return "活得很漂亮";
+  if (v > 620) return "踏實的一生";
+  if (v > 480) return "平凡但完整";
+  if (v > 340) return "有點辛苦";
+  return "來過，走過";
+}
+function epitaph(){
+  const b = [];
+  if (S.kids.length >= 3) b.push("子孫滿堂");
+  if (S.money > 3000) b.push("留下不少錢");
+  if (S.st.mood > 75) b.push("走的時候是笑的");
+  if (S.exes >= 2) b.push("愛過很多次");
+  if (!S.partner && S.kids.length === 0) b.push("一個人也走完了");
+  if (S.st.health > 70) b.push("身體一直很好");
+  if (S.badges["創業成功"]) b.push("自己當過老闆");
+  if (S.age < 50) b.push("走得太早");
+  return b.length ? b.join("・") : "平平安安";
+}
+function showEnd(){
+  const v = score();
+  const bs = Object.keys(S.badges);
+  const el = document.getElementById("endScreen");
+  el.innerHTML =
+    '<div class="kicker">AGE '+S.age+' · END</div>'+
+    '<h2>'+S.name+'，'+verdict(v)+'</h2>'+
+    '<p class="body">'+S.deathReason+'<br>'+epitaph()+'</p>'+
+    '<div class="score">'+v+'</div>'+
+    '<div class="grid">'+
+      row("學歷", S.degree) + row("最後職業", S.job?S.job.t:(S.retired?"退休":"無")) +
+      row("資產", fmtMoney(S.money)) + row("子女", S.kids.length+" 人") +
+      row("健康", Math.round(S.st.health)) + row("心情", Math.round(S.st.mood)) +
+    '</div>'+
+    (bs.length ? '<div class="badges">'+bs.map(b=>'<b>'+b+'</b>').join("")+'</div>' : '')+
+    '<div class="choices"><button id="again">再活一次</button></div>'+
+    (prevLives.length ? '<p class="body" style="margin-top:12px;font-size:11px;opacity:.6">前幾輩子：'+prevLives.map(p=>p.name+" "+p.age+"歲／"+p.score+"分").join("，")+'</p>' : '');
+  el.classList.add("on");
+  document.getElementById("again").onclick = resetAll;
+  saveLife(v);
+  document.getElementById("tapeSub").textContent = S.name+"．"+S.age+" 歲．"+verdict(v)+" "+v+" 分";
+}
+function row(k,v){ return '<span>'+k+'<em>'+v+'</em></span>'; }
+
+/* ===================== 存檔（只存歷代成績） ===================== */
+let prevLives = [];
+function loadLives(){
+  try { prevLives = JSON.parse(localStorage.getItem("lifemachine.lives") || "[]"); }
+  catch(e){ prevLives = []; }
+  if (!Array.isArray(prevLives)) prevLives = [];
+}
+function saveLife(v){
+  try {
+    prevLives.unshift({name:S.name, age:S.age, score:v});
+    prevLives = prevLives.slice(0,4);
+    localStorage.setItem("lifemachine.lives", JSON.stringify(prevLives));
+  } catch(e){}
+}
+
+/* ===================== 畫面 ===================== */
+const $ = id => document.getElementById(id);
+let lastSprite = "";
+function render(){
+  if (!S) return;
+  $("age").textContent = S.age;
+  $("stageName").textContent = STAGE_INFO[stageKey()].n + (S.job ? "／"+S.job.t : "");
+  $("cash").textContent = (S.money < 0 ? "-" : "") + "$" + fmtMoney(Math.abs(S.money));
+
+  const sp = spriteFor();
+  if (sp !== lastSprite){ $("sprite").innerHTML = spriteSVG(sp); lastSprite = sp; }
+
+  $("bars").innerHTML = STAT_DEF.map(d => {
+    const v = Math.round(S.st[d.k]);
+    return '<div class="bar'+(v<25?' low':'')+'"><span>'+d.n+'<em>'+v+'</em></span><i><b style="width:'+v+'%"></b></i></div>';
+  }).join("");
+
+  const fam = [];
+  if (S.partner) fam.push('<b>'+(S.partner.married?"配偶":"交往")+'</b> '+S.partner.name+' '+Math.round(S.partner.aff)+'%');
+  if (S.kids.length) fam.push('<b>子女</b> '+S.kids.map(k=>k.name+"("+(S.age-k.born)+")").join("、"));
+  if (S.house) fam.push('<b>房</b> '+S.house);
+  $("family").innerHTML = fam.join("　") || '<span style="opacity:.4">一個人</span>';
+
+  renderFocus();
+  renderTicker();
+}
+function renderTicker(){
+  const last = S.log.slice(-3);
+  $("ticker").innerHTML = last.map(l => '<p><u>'+l.age+'</u>'+l.text+'</p>').join("") || '<p>故事還沒開始。</p>';
+}
+function renderTape(){
+  const list = $("tapeList");
+  list.innerHTML = S.log.map(l =>
+    '<div class="'+(l.tone||"")+(l.key?" key":"")+'"><u>'+l.age+'</u><span>'+l.text+'</span></div>'
+  ).join("");
+  list.scrollTop = list.scrollHeight;
+  $("tapeSub").textContent = S.name + "　" + S.origin.tag + "　" + S.age + " 歲";
+}
+function renderFocus(){
+  const set = FOCUS_SETS[stageKey()] || FOCUS_SETS.work;
+  if (!set.includes(S.focus)) S.focus = set[0];
+  $("focusGrid").innerHTML = set.map(f =>
+    '<button class="focus-btn" data-f="'+f+'" aria-pressed="'+(S.focus===f)+'">'+f+'</button>'
+  ).join("");
+  Array.prototype.forEach.call($("focusGrid").children, b => {
+    b.onclick = () => { S.focus = b.dataset.f; renderFocus(); };
+  });
+}
+
+/* ===================== 事件視窗 ===================== */
+function openEvent(){
+  const ev = pending; if (!ev) return;
+  $("evAge").textContent = "AGE " + S.age;
+  $("evTitle").textContent = ev.t;
+  $("evText").textContent = ev.d;
+  const box = $("evChoices"); box.innerHTML = "";
+  ev.c.forEach(ch => {
+    const b = document.createElement("button");
+    b.innerHTML = ch.l + (ch.g ? '<small>'+ch.g+'</small>' : '');
+    b.onclick = () => {
+      $("event").classList.remove("on");
+      pending = null;
+      applyEff(ch.e);
+      if (ch.g) logit(ch.g, null);
+      if (ch.run) ch.run();
+      render();
+      if (pending) { openEvent(); return; }   // 連鎖事件（例如選科系）
+      if (deathCheck()) return;
+      renderTape();
+    };
+    box.appendChild(b);
+  });
+  $("event").classList.add("on");
+}
+
+/* ===================== 時間 ===================== */
+const YEAR_MS = 2600;
+let speed = 1, acc = 0, lastT = 0, running = false;
+function modalOpen(){
+  return $("event").classList.contains("on") ||
+         $("startScreen").classList.contains("on") ||
+         $("endScreen").classList.contains("on");
+}
+function frame(t){
+  if (!lastT) lastT = t;
+  const dt = Math.min(t - lastT, 200); lastT = t;
+  if (running && speed > 0 && !modalOpen() && S && S.alive){
+    acc += dt * speed;
+    if (acc >= YEAR_MS){ acc = 0; advanceYear(); }
+  }
+  $("yearbar").style.width = (running && S && S.alive ? Math.min(acc/YEAR_MS,1)*100 : 0) + "%";
+  requestAnimationFrame(frame);
+}
+function syncSpeedBtns(){
+  [[0,"sp0"],[1,"sp1"],[2,"sp2"],[4,"sp4"]].forEach(p => {
+    $(p[1]).setAttribute("aria-pressed", speed === p[0]);
+  });
+  $("speedLabel").textContent = speed === 0 ? "已暫停" : "一年約 " + (YEAR_MS/1000/speed).toFixed(1) + " 秒";
+}
+[[0,"sp0"],[1,"sp1"],[2,"sp2"],[4,"sp4"]].forEach(p => {
+  $(p[1]).onclick = () => { speed = p[0]; acc = 0; syncSpeedBtns(); };
+});
+$("stepBtn").onclick = () => { if (S && S.alive && !modalOpen()){ acc = 0; advanceYear(); } };
+
+/* ===================== 開場 ===================== */
+function rollBirth(){
+  const o = rollOrigin();
+  const sex = Math.random() < 0.5 ? "M" : "F";
+  draft = {o:o, sex:sex, name:makeName(sex)};
+  $("birthTitle").textContent = draft.name + "・" + o.name;
+  $("birthText").textContent = o.desc + "（" + (sex==="M"?"男":"女") + "）";
+  $("rerollLeft").textContent = rerolls > 0 ? "還可以換 " + rerolls + " 次" : "沒得換了，認命吧";
+}
+$("btnReroll").onclick = () => { if (rerolls > 0){ rerolls--; rollBirth(); } };
+$("btnStart").onclick = () => {
+  S = newState(draft.o, draft.name, draft.sex);
+  S.focus = "餵養照顧";
+  logit(S.name + "出生了。" + S.origin.desc, null, true);
+  $("startScreen").classList.remove("on");
+  running = true; speed = 1; acc = 0; syncSpeedBtns();
+  render(); renderTape();
+};
+function resetAll(){
+  $("endScreen").classList.remove("on");
+  $("event").classList.remove("on");
+  rerolls = 3; S = null; pending = null; running = false; lastSprite = "";
+  $("tapeList").innerHTML = '<div class="tape-empty">這台機器會把每一年印出來。</div>';
+  $("tapeSub").textContent = "尚未出生";
+  rollBirth();
+  $("startScreen").classList.add("on");
+}
+
+loadLives();
+rollBirth();
+syncSpeedBtns();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -289,6 +289,7 @@ const $ = id => document.getElementById(id);
 const pick = a => a[Math.floor(Math.random()*a.length)];
 const rnd = (a,b) => a + Math.random()*(b-a);
 const chance = p => Math.random() < p;
+const ri = (a,b) => Math.floor(rnd(a,b+1));
 
 /* ===================== 像素小人 ===================== */
 const SPR = {
@@ -457,13 +458,24 @@ function newState(d){
     traits:d.traits.map(t=>t.n), conds:[],
     age:0, alive:true, st:st, money:d.origin.money,
     focus:null, path:null, major:null, school:"", degree:"無",
-    job:null, retired:false, house:null,
+    job:null, retired:false, house:null, uniTier:"", uniEnd:0, gradEnd:0,
+    econ:0, econUntil:0,
     partner:null, kids:[], exes:0, friend:null,
     log:[], badges:{}, flags:{}, seen:{}, debtYears:0
   };
 }
 const clamp = v => Math.max(0, Math.min(100, v));
-function add(k,v){ if (S.st[k] !== undefined) S.st[k] = clamp(S.st[k] + v); }
+// 屬性越高越難再往上推（邊際遞減），所以第一志願、醫學系不是努力就有
+const SOFT = {intel:1, charm:1, fit:1, social:1};
+function add(k,v){
+  if (S.st[k] === undefined) return;
+  if (v > 0 && SOFT[k]){
+    const c = S.st[k];
+    if (c > 88) v *= 0.12; else if (c > 78) v *= 0.25;
+    else if (c > 68) v *= 0.45; else if (c > 58) v *= 0.70;
+  }
+  S.st[k] = clamp(S.st[k] + v);
+}
 function money(v){ S.money += v; }
 function badge(t){ S.badges[t] = true; }
 function has(t){ return S.traits.indexOf(t) >= 0; }
@@ -491,9 +503,10 @@ function stageKey(){
   if (a < 12) return "primary";
   if (a < 15) return "junior";
   if (a < 18) return "senior";
-  if (S.path === "uni" && a < 22) return "uni";
-  if (S.path === "grad" && a < 25) return "grad";
-  if (S.path === "abroad" && a < 24) return "abroad";
+  if (S.path === "repeat" && a < 20) return "senior";
+  if (S.path === "uni" && a < (S.uniEnd||22)) return "uni";
+  if (S.path === "grad" && a < (S.gradEnd||25)) return "grad";
+  if (S.path === "abroad" && a < (S.gradEnd||24)) return "abroad";
   return "work";
 }
 const STAGE_INFO = {
@@ -514,8 +527,8 @@ function spriteFor(){
 const FOCUS = {
   "餵養照顧":{health:5,fit:3,mood:1,stress:-3},
   "陪玩互動":{mood:8,charm:3,social:4,intel:1,stress:-5},
-  "早教啟蒙":{intel:7,mood:-4,stress:5},
-  "用功讀書":{intel:5,mood:-3,fit:-1,stress:6},
+  "早教啟蒙":{intel:5,mood:-4,stress:5},
+  "用功讀書":{intel:4,mood:-3,fit:-1,stress:6},
   "運動放電":{fit:6,health:3,mood:2,intel:-1,stress:-8},
   "打電動":{mood:8,intel:-1,fit:-3,social:2,stress:-7},
   "學才藝":{charm:5,intel:2,mood:-1,cash:-6,stress:4},
@@ -552,29 +565,32 @@ const FOCUS_SETS = {
 };
 
 /* ===================== 工作 ===================== */
+const TIER = {"科大":0,"私立":1,"國立":2,"頂大":3};
 const JOBS = [
-  {t:"超商店員",pay:36,pres:1,need:{}},
-  {t:"餐飲外場",pay:38,pres:1,need:{}},
-  {t:"物流司機",pay:52,pres:1,need:{fit:55}},
-  {t:"工地師傅",pay:64,pres:2,need:{fit:65}},
-  {t:"健身教練",pay:58,pres:2,need:{fit:72,charm:60}},
-  {t:"行政助理",pay:42,pres:2,need:{degree:"高中"}},
-  {t:"業務專員",pay:58,pres:2,need:{charm:60}},
-  {t:"護理師",pay:70,pres:3,need:{degree:"大學",intel:62}},
-  {t:"小學老師",pay:66,pres:3,need:{degree:"大學",intel:65}},
-  {t:"軟體工程師",pay:98,pres:3,need:{degree:"大學",intel:72,major:"理工"}},
-  {t:"半導體工程師",pay:135,pres:4,need:{degree:"大學",intel:80,major:"理工"}},
-  {t:"會計師",pay:88,pres:3,need:{degree:"大學",intel:72,major:"商管"}},
-  {t:"設計師",pay:60,pres:3,need:{degree:"大學",charm:65,major:"藝術"}},
-  {t:"記者",pay:50,pres:2,need:{degree:"大學",major:"文法"}},
-  {t:"律師",pay:130,pres:4,need:{degree:"大學",intel:82,major:"文法"}},
-  {t:"公務員",pay:68,pres:3,need:{degree:"大學",intel:70}},
-  {t:"醫師",pay:175,pres:5,need:{degree:"大學",intel:88,major:"醫學"}},
-  {t:"大學教授",pay:120,pres:5,need:{degree:"碩士",intel:85}},
-  {t:"研發主管",pay:152,pres:4,need:{degree:"碩士",intel:80,major:"理工"}},
-  {t:"投資銀行",pay:165,pres:4,need:{degree:"碩士",intel:80,major:"商管"}},
-  {t:"自由接案",pay:48,pres:2,need:{charm:55}},
-  {t:"YouTuber",pay:45,pres:2,need:{charm:70}}
+  {t:"超商店員",pay:36,pres:1,cat:"svc",gr:0.45,need:{}},
+  {t:"餐飲外場",pay:38,pres:1,cat:"svc",gr:0.45,need:{}},
+  {t:"廚師",pay:56,pres:2,cat:"svc",gr:0.9,need:{fit:55}},
+  {t:"物流司機",pay:52,pres:1,cat:"labor",gr:0.4,need:{fit:55}},
+  {t:"工地師傅",pay:64,pres:2,cat:"labor",gr:0.7,need:{fit:65}},
+  {t:"健身教練",pay:58,pres:2,cat:"svc",gr:0.9,vol:0.2,need:{fit:72,charm:60}},
+  {t:"行政助理",pay:42,pres:2,cat:"gov",gr:0.35,need:{degree:"高中"}},
+  {t:"業務專員",pay:58,pres:2,cat:"biz",gr:1.5,vol:0.3,need:{charm:60}},
+  {t:"房仲",pay:50,pres:1,cat:"biz",gr:1.7,vol:0.5,need:{charm:62}},
+  {t:"護理師",pay:70,pres:3,cat:"med",gr:0.6,need:{degree:"大學",intel:60}},
+  {t:"小學老師",pay:66,pres:3,cat:"edu",gr:0.45,need:{degree:"大學",intel:63}},
+  {t:"軟體工程師",pay:98,pres:3,cat:"tech",gr:1.3,need:{degree:"大學",intel:70,major:"理工"}},
+  {t:"半導體工程師",pay:138,pres:4,cat:"tech",gr:1.2,need:{degree:"大學",intel:78,major:"理工",tier:2}},
+  {t:"會計師",pay:88,pres:3,cat:"pro",gr:0.9,need:{degree:"大學",intel:70,major:"商管"}},
+  {t:"設計師",pay:60,pres:3,cat:"create",gr:0.9,vol:0.25,need:{degree:"大學",charm:63,major:"藝術"}},
+  {t:"記者",pay:50,pres:2,cat:"create",gr:0.7,need:{degree:"大學",major:"文法"}},
+  {t:"律師",pay:132,pres:4,cat:"pro",gr:1.1,need:{degree:"大學",intel:80,major:"文法",tier:2}},
+  {t:"公務員",pay:68,pres:3,cat:"gov",gr:0.4,need:{degree:"大學",intel:68}},
+  {t:"醫師",pay:178,pres:5,cat:"med",gr:0.8,need:{degree:"大學",intel:84,major:"醫學",tier:2}},
+  {t:"大學教授",pay:122,pres:5,cat:"edu",gr:0.55,need:{degree:"碩士",intel:82}},
+  {t:"研發主管",pay:152,pres:4,cat:"tech",gr:1.0,need:{degree:"碩士",intel:78,major:"理工"}},
+  {t:"投資銀行",pay:168,pres:4,cat:"biz",gr:1.4,vol:0.32,need:{degree:"碩士",intel:78,major:"商管",tier:2}},
+  {t:"自由接案",pay:48,pres:2,cat:"free",gr:0.8,vol:0.55,need:{charm:55}},
+  {t:"YouTuber",pay:45,pres:2,cat:"free",gr:1.2,vol:0.85,need:{charm:70}}
 ];
 const DEG = {"無":0,"高中":1,"大學":2,"碩士":3,"博士":4};
 function jobOK(j){
@@ -584,9 +600,30 @@ function jobOK(j){
   if (n.fit && S.st.fit < n.fit) return false;
   if (n.charm && S.st.charm < n.charm) return false;
   if (n.major && S.major !== n.major) return false;
+  if (n.tier && (TIER[S.uniTier] === undefined || TIER[S.uniTier] < n.tier)) return false;
   return true;
 }
-function takeJob(j){ S.job = {t:j.t,pay:j.pay,pres:j.pres,years:0}; if (j.pres>=5) badge("人生勝利組"); }
+const jobCat = c => atWork() && S.job.cat === c;
+// 不同職業的升遷長什麼樣子
+const RAISE = {
+  tech:  ()=>"升上資深工程師，年薪變 "+S.job.pay+" 萬。",
+  biz:   ()=>"帶了自己的業務團隊，年薪變 "+S.job.pay+" 萬。",
+  svc:   ()=>"升上店長，年薪變 "+S.job.pay+" 萬。",
+  labor: ()=>"開始帶班，工資變 "+S.job.pay+" 萬。",
+  gov:   ()=>"考績連兩年甲等，升了一職等，年薪 "+S.job.pay+" 萬。",
+  med:   ()=>"升上主治（護理長），年薪變 "+S.job.pay+" 萬。",
+  edu:   ()=>"接了行政職，年薪變 "+S.job.pay+" 萬。",
+  create:()=>"作品有名氣了，報價變 "+S.job.pay+" 萬。",
+  pro:   ()=>"掛上合夥人，年薪變 "+S.job.pay+" 萬。",
+  free:  ()=>"案子接不完，一年可以做到 "+S.job.pay+" 萬。"
+};
+function takeJob(j){
+  const tm = {"頂大":1.16,"國立":1.06,"私立":0.97,"科大":0.92}[S.uniTier] || 1;
+  const em = 1 + S.econ * 0.06;
+  S.job = {t:j.t, pay:Math.max(30,Math.round(j.pay*tm*em*rnd(0.9,1.12))),
+           pres:j.pres, cat:j.cat||"svc", gr:j.gr||1, vol:j.vol||0, years:0};
+  if (j.pres >= 5) badge("人生勝利組");
+}
 
 /* ===================== 紀錄 ===================== */
 function logit(text, tone, key){
@@ -648,7 +685,6 @@ const AUTO = [
   {w:3,when:()=>S.age>=38&&S.age<=58&&S.st.fit>30,t:"中年發福，褲子扣不起來。",e:{fit:-7,charm:-4,mood:-3}},
   {w:3,when:()=>S.age>=25&&S.money>60,t:"股市大跌，帳面蒸發一截。",e:{mood:-6,stress:7},tone:"bad",run:()=>money(-S.money*rnd(0.08,0.2))},
   {w:3,when:()=>S.age>=25&&S.money>60,t:"手上的股票莫名其妙噴出一根長紅。",e:{mood:6},tone:"good",run:()=>money(S.money*rnd(0.08,0.2))},
-  {w:3,when:atWork,t:"專案做完被老闆公開表揚，獎金入帳。",e:{mood:7,social:3},tone:"good",run:()=>money(S.job.pay*0.2)},
   {w:3,when:()=>atWork()&&S.st.stress>70,t:"連續加班兩個月，週末也在收信。",e:{health:-5,mood:-7,stress:6},tone:"bad"},
   {w:3,when:()=>kidAged(15,22),t:"小孩考上了不錯的學校，你在群組裡炫耀了三天。",e:{mood:12,social:3},tone:"good"},
   {w:3,when:()=>kidAged(12,18),t:"小孩進入叛逆期，整天把門甩得很大聲。",e:{mood:-9,stress:8},tone:"bad"},
@@ -660,7 +696,43 @@ const AUTO = [
   {w:2,when:()=>S.age>=16&&S.age<=70,t:"機車被偷了，警察說機會不大。",e:{cash:-9,mood:-6},tone:"bad"},
   {w:2,when:()=>S.friend&&S.age>=22,t:"跟老朋友喝到半夜，講的還是高中那些事。",e:{mood:9,stress:-10},tone:"good"},
   {w:2,when:()=>S.age>=24&&S.st.luck>70,t:"抽獎抽中了一台家電，運氣真的有差。",e:{mood:7,cash:3},tone:"good"},
-  {w:2,when:()=>S.age>=24&&S.st.luck<30,t:"出門踩到狗屎，手機還掉進水溝。",e:{mood:-6,cash:-3},tone:"bad"}
+  {w:2,when:()=>S.age>=24&&S.st.luck<30,t:"出門踩到狗屎，手機還掉進水溝。",e:{mood:-6,cash:-3},tone:"bad"},
+  // —— 職業：每種工作遇到的事不一樣 ——
+  {w:4,when:()=>jobCat("tech"),t:"專案準時上線，拿到一筆專案獎金。",e:{mood:7,stress:-4},tone:"good",run:()=>money(S.job.pay*0.22)},
+  {w:4,when:()=>jobCat("tech"),t:"系統半夜掛掉，你在棉被裡遠端修了三小時。",e:{health:-4,mood:-6,stress:10},tone:"bad"},
+  {w:4,when:()=>jobCat("biz"),t:"業績達標，獎金比底薪還多。",e:{mood:9,social:4},tone:"good",run:()=>money(S.job.pay*0.45)},
+  {w:4,when:()=>jobCat("biz"),t:"跟了半年的大客戶突然換窗口，這季全白做。",e:{mood:-10,stress:12},tone:"bad",run:()=>money(-S.job.pay*0.18)},
+  {w:4,when:()=>jobCat("svc"),t:"客人為了一塊錢跟你吵了二十分鐘。",e:{mood:-6,stress:7,charm:2},tone:"bad"},
+  {w:3,when:()=>jobCat("svc"),t:"有個熟客說只找你，你偷偷開心了一整天。",e:{mood:7,charm:3,social:3},tone:"good"},
+  {w:4,when:()=>jobCat("labor"),t:"趕工連上二十天，收工時腰已經直不起來。",e:{health:-6,fit:-3,stress:11},tone:"bad",run:()=>money(S.job.pay*0.18)},
+  {w:3,when:()=>jobCat("gov"),t:"年終考績甲等，穩穩加了一級。",e:{mood:5,stress:-4},tone:"good",run:()=>{S.job.pay=Math.round(S.job.pay*1.04)}},
+  {w:3,when:()=>jobCat("gov"),t:"上面換了長官，整套流程全部重來一遍。",e:{mood:-6,stress:9},tone:"bad"},
+  {w:4,when:()=>jobCat("med"),t:"連值一個月大夜，分不清現在是白天還晚上。",e:{health:-7,mood:-6,stress:13},tone:"bad",run:()=>money(S.job.pay*0.15)},
+  {w:3,when:()=>jobCat("med"),t:"病人家屬送來一面錦旗，掛在走廊上。",e:{mood:10,social:4},tone:"good"},
+  {w:3,when:()=>jobCat("edu"),t:"帶過的學生考上了好學校，特地回來看你。",e:{mood:12,social:5},tone:"good"},
+  {w:3,when:()=>jobCat("edu"),t:"家長投訴你教得不好，校長找你喝茶。",e:{mood:-9,stress:11},tone:"bad"},
+  {w:4,when:()=>jobCat("create"),t:"作品被轉了幾萬次，接案信塞爆信箱。",e:{mood:11,charm:6,social:5},tone:"good",run:()=>money(S.job.pay*0.5)},
+  {w:4,when:()=>jobCat("create"),t:"提案被打回三次，最後用的是你第一版。",e:{mood:-7,stress:9},tone:"bad"},
+  {w:4,when:()=>jobCat("free"),t:"案主拖款三個月，你連催了四封信。",e:{mood:-8,stress:10},tone:"bad",run:()=>money(-S.job.pay*0.25)},
+  {w:3,when:()=>jobCat("free"),t:"接到一個大案，一次抵三個月。",e:{mood:9},tone:"good",run:()=>money(S.job.pay*0.6)},
+  {w:3,when:()=>jobCat("pro"),t:"接了一個沒人要碰的案子，熬了三個月，贏了。",e:{mood:11,intel:4,stress:8},tone:"good",run:()=>money(S.job.pay*0.3)},
+  // —— 感情與家庭的日常 ——
+  {w:3,when:()=>married()&&S.focus==="拼事業",t:"又是一個人吃晚餐，菜在電鍋裡保溫到乾掉。",e:{mood:-6},tone:"bad",run:()=>{S.partner.aff-=5}},
+  {w:3,when:()=>married()&&S.partner.aff>65,t:"另一半幫你請了一天假，什麼都沒安排，就睡到飽。",e:{mood:10,stress:-14,health:2},tone:"good"},
+  {w:3,when:()=>married()&&S.kids.length===0&&S.age>=28&&S.age<=42,t:"過年回家，親戚第七次問什麼時候生。",e:{mood:-7,stress:8},tone:"bad"},
+  {w:3,when:()=>married()&&S.kids.length>0&&S.age<=52,t:"婆婆（或岳母）說你帶小孩的方式不對。",e:{mood:-8,stress:9},tone:"bad",run:()=>{S.partner.aff-=4}},
+  {w:2,when:()=>married()&&S.age>=30,t:"另一半升職了，你們去吃了很貴的一餐。",e:{mood:8,cash:-6},tone:"good",run:()=>{S.partner.aff=Math.min(100,S.partner.aff+6);money(rnd(10,30))}},
+  {w:3,when:()=>S.partner&&!married(),t:"你們去看了一場很爛的電影，但笑了一整路。",e:{mood:7,stress:-7},tone:"good",run:()=>{S.partner.aff=Math.min(100,S.partner.aff+5)}},
+  {w:3,when:()=>S.partner&&!married()&&S.partner.aff<62,t:"訊息已讀不回，你盯著螢幕看了很久。",e:{mood:-7,stress:7},tone:"bad",run:()=>{S.partner.aff-=5}},
+  {w:3,when:()=>S.age>=22&&S.age<=48&&single(),t:"滑了兩個小時的交友軟體，一個也沒配對。",e:{mood:-5},tone:"bad"},
+  {w:3,when:()=>S.age>=24&&S.age<=45&&single(),t:"參加朋友的婚禮，整場被問什麼時候換你。",e:{mood:-6,social:3,cash:-4},tone:"bad"},
+  {w:2,when:()=>kidAged(0,3),t:"小孩半夜哭了三次，你們輪流起來，誰也沒睡。",e:{health:-4,mood:-4,stress:10},tone:"bad"},
+  {w:2,when:()=>kidAged(5,10),t:"小孩在聯絡簿上畫了一家人，把你畫得很高。",e:{mood:12,stress:-8},tone:"good"},
+  {w:3,when:()=>S.partner&&!married()&&(S.age-S.partner.since)>=4&&S.partner.aff<50,t:"你們開始常常為了小事吵架，吵完誰也不先開口。",e:{mood:-8,stress:9},tone:"bad",run:()=>{S.partner.aff-=8}},
+  {w:4,when:()=>married()&&S.age>=66&&!S.flags.widowed,t:"",
+   dt:()=>S.partner.name+"走了。早上醒來，旁邊的位置是冷的。",
+   e:{mood:-32,health:-6,stress:16},tone:"bad",
+   run:()=>{S.flags.widowed=true;S.partner=null;badge("送走了一個人")}}
 ];
 
 /* ===================== 選擇事件（會中斷） ===================== */
@@ -726,7 +798,7 @@ const CHOICE = [
 
   {id:"cram",w:7,when:()=>S.age>=12&&S.age<=14,
    t:"要不要去補習",d:"全班一半以上的人晚上都在補習班。",
-   c:[{l:"砸錢去補",e:{intel:11,mood:-7,cash:-35,stress:14},g:"每天讀到十點半。"},
+   c:[{l:"砸錢去補",e:{intel:11,mood:-7,cash:-35,stress:14},g:"每天讀到十點半。",run:()=>{S.flags.cram=true}},
       {l:"自己在家念",e:{intel:5,mood:-2,stress:5},g:"靠自己，也還可以。"},
       {l:"根本不念",e:{mood:9,intel:-5,social:5,stress:-8},g:"球場比教室有趣多了。"}]},
 
@@ -749,7 +821,7 @@ const CHOICE = [
       {l:"專心準備考試",e:{intel:9,mood:-5,stress:12},g:"你把時間全押在書上。"},
       {l:"兩邊都做一點",e:{cash:6,intel:3,health:-4,stress:11},g:"睡眠變成最奢侈的東西。"}]},
 
-  {id:"confess",w:9,when:()=>S.age>=15&&S.age<=25&&single(),
+  {id:"confess",w:30,when:()=>S.age>=15&&S.age<=30&&single(),
    t:"有一個喜歡的人",d:"你們一起走了一學期的回家路，今天他／她好像在等你說什麼。",
    c:[{l:"鼓起勇氣告白",e:{},g:"",run:()=>{
         if (roll((S.st.charm*0.55 + S.st.social*0.3 + 10)/100)){
@@ -760,13 +832,22 @@ const CHOICE = [
       {l:"維持朋友就好",e:{mood:-4,social:6},g:"你們還是朋友，一直都是。"},
       {l:"裝作什麼都沒發生",e:{mood:-7,intel:2,stress:6},g:"那條路後來你繞道走。"}]},
 
-  {id:"friend",w:7,when:()=>S.age>=13&&S.age<=26&&!S.friend,
+  {id:"friend",w:14,when:()=>S.age>=13&&S.age<=26&&!S.friend,
    t:"有一個人跟你特別聊得來",d:"你們可以講到半夜，隔天還有話講。",
    c:[{l:"認真經營這段友情",e:{social:9,mood:8,stress:-9},g:"",run:()=>{S.friend={name:makeName(pick(["M","F"])),bond:80};badge("有一輩子的朋友");logit("你跟"+S.friend.name+"成了最好的朋友。","good",true)}},
       {l:"保持普通距離",e:{mood:-2,intel:3},g:"你習慣跟人留一點空白。"},
       {l:"忙著做自己的事",e:{intel:6,social:-5},g:"後來你們就只剩按讚的交情。"}]},
 
-  {id:"blind",w:5,when:()=>S.age>=26&&S.age<=42&&single(),
+  {id:"netdate",w:20,when:()=>single()&&S.age>=22&&S.age<=52,
+   t:"配對成功了",d:"聊了三個禮拜，他問要不要出來吃個飯。",
+   c:[{l:"赴約",e:{stress:5},g:"",run:()=>{
+        if (roll(0.5)){ S.partner=partnerNew(58); add("mood",11); logit("本人比照片自然，你們續攤到十一點。跟"+S.partner.name+"在一起了。","good",true); }
+        else { add("mood",-7); logit("見了面才發現照片是五年前的，而且話題很乾。","bad"); }
+      }},
+      {l:"再聊久一點",e:{mood:3},g:"",run:()=>{if(chance(0.5))logit("聊著聊著就淡了，最後誰也沒再開口。","bad")}},
+      {l:"算了，刪掉",e:{mood:-3,stress:-4},g:"你說這種東西不適合你。"}]},
+
+  {id:"blind",w:20,when:()=>S.age>=25&&S.age<=46&&single(),
    t:"長輩要幫你安排相親",d:"阿姨說對方是公務員，人很老實。",
    c:[{l:"去看看",e:{},g:"",run:()=>{
         if (roll(0.55)){ S.partner=partnerNew(55); add("mood",8); logit("意外聊得來，跟"+S.partner.name+"開始交往。","good",true); }
@@ -775,7 +856,7 @@ const CHOICE = [
       {l:"推掉，等緣分",e:{mood:3,social:-2},g:"你相信會遇到對的人。"},
       {l:"直接說你不想結婚",e:{mood:6,social:-8,stress:-6},g:"家族群組安靜了很久。",run:()=>{S.flags.nomarry=true}}]},
 
-  {id:"propose",w:13,when:()=>S.partner&&!married()&&S.partner.aff>=62&&S.age>=24,
+  {id:"propose",w:48,when:()=>S.partner&&!married()&&S.partner.aff>=46&&S.age>=23,
    t:"要不要結婚",dyn:()=>"在一起 "+(S.age-S.partner.since)+" 年了，雙方家長開始問「什麼時候」。",
    c:[{l:"求婚",e:{mood:16,cash:-60,social:6},g:"",run:()=>{
         S.partner.married=true; S.partner.aff=Math.min(100,S.partner.aff+12);
@@ -787,7 +868,7 @@ const CHOICE = [
         else { S.partner.aff-=20; logit("話說開了，但有什麼東西裂了。","bad"); }
       }}]},
 
-  {id:"kid",w:13,when:()=>married()&&S.age>=26&&S.age<=44&&S.kids.length<4,
+  {id:"kid",w:42,when:()=>married()&&S.age>=25&&S.age<=44&&S.kids.length<4,
    t:"要生小孩嗎",d:"醫生說身體沒問題，問題只有「要不要」。",
    c:[{l:"生",e:{mood:14,cash:-30,health:-4,stress:12},g:"",run:()=>{
         const k={name:makeName(chance(.5)?"M":"F"),born:S.age,bond:70};
@@ -812,7 +893,7 @@ const CHOICE = [
       }},
       {l:"乾脆創業",e:{mood:4,health:-6,stress:20},g:"",run:()=>{
         money(-Math.min(S.money*0.7,300));
-        if (roll(0.35)){ S.job={t:"創業老闆",pay:Math.round(rnd(150,400)),pres:4,years:0}; badge("創業成功"); logit("公司活下來了，而且賺錢。","good",true); }
+        if (roll(0.35)){ S.job={t:"創業老闆",pay:Math.round(rnd(150,400)),pres:4,cat:"biz",gr:1.3,vol:0.4,years:0}; badge("創業成功"); logit("公司活下來了，而且賺錢。","good",true); }
         else { S.job.pay=Math.round(S.job.pay*0.7); S.job.years=0; add("mood",-12); logit("燒完積蓄收攤，回去當員工。","bad",true); }
       }}]},
 
@@ -832,7 +913,7 @@ const CHOICE = [
       {l:"選擇原諒",e:{mood:-10,stress:12},g:"",run:()=>{S.partner.aff+=8;logit("你說沒關係，但心裡記了一筆。","bad")}},
       {l:"假裝沒看到",e:{mood:-14,intel:2,stress:16},g:"日子照過，只是你再也沒笑過那麼大聲。"}]},
 
-  {id:"layoff",w:6,when:()=>atWork()&&S.age>=35&&S.age<=58,
+  {id:"layoff",w:()=>S.econ<0?15:5,when:()=>atWork()&&S.age>=28&&S.age<=58,
    t:"公司要裁員",d:"HR 約你下午三點，會議室窗簾是拉上的。",
    c:[{l:"接受資遣",e:{mood:-10,stress:10},g:"",run:()=>{money(S.job.pay*0.8);S.job=null;logit("領了資遣費，開始找工作。","bad",true)}},
       {l:"爭取留下",e:{mood:-6,health:-3,stress:14},g:"",run:()=>{
@@ -887,13 +968,187 @@ const CHOICE = [
    t:"該退休了嗎",d:"同期的人陸續辦了退休，你還在開早會。",
    c:[{l:"退休",e:{mood:14,health:5,stress:-35},g:"",run:()=>{S.retired=true;S.job=null;badge("順利退休");logit("最後一天，你把桌上的盆栽帶回家。","good",true)}},
       {l:"再做幾年",e:{mood:-5,health:-6,stress:10},g:"",run:()=>{if(S.job)money(S.job.pay*1.2)}},
-      {l:"轉當顧問",e:{mood:7,health:-2,stress:-12},g:"",run:()=>{S.job={t:"顧問",pay:Math.round(S.job.pay*0.5),pres:3,years:0}}}]},
+      {l:"轉當顧問",e:{mood:7,health:-2,stress:-12},g:"",run:()=>{S.job={t:"顧問",pay:Math.round(S.job.pay*0.5),pres:3,cat:"pro",gr:0.5,vol:0.2,years:0}}}]},
 
   {id:"will",w:6,when:()=>S.age>=72,
    t:"律師問你遺囑怎麼寫",d:"這件事拖很久了，今天總算坐下來。",
    c:[{l:"全部留給家人",e:{mood:8},g:"",run:()=>{S.flags.will="家人";S.kids.forEach(k=>k.bond=Math.min(100,k.bond+10))}},
       {l:"捐出去",e:{mood:12,social:8},g:"",run:()=>{S.flags.will="捐贈";badge("留下善款")}},
-      {l:"趁活著全部花掉",e:{mood:17,health:3},g:"",run:()=>{money(-Math.max(S.money,0)*0.9);S.flags.will="花光";badge("及時行樂")}}]}
+      {l:"趁活著全部花掉",e:{mood:17,health:3},g:"",run:()=>{money(-Math.max(S.money,0)*0.9);S.flags.will="花光";badge("及時行樂")}}]},
+/* ---------- 感情：更多突發狀況 ---------- */
+  {id:"ldr",w:7,when:()=>S.partner&&!married()&&S.age>=19&&S.age<=34,
+   t:"他要去外地了",dyn:()=>S.partner.name+"考上了另一個城市的學校（或工作），問你怎麼辦。",
+   c:[{l:"跟著搬過去",e:{mood:6,social:-10,cash:-40,stress:8},g:"",run:()=>{S.partner.aff=Math.min(100,S.partner.aff+14);S.place=wpick(PLACES);logit("你搬到了"+S.place.name+"，從頭認識一條街。",null,true)}},
+      {l:"遠距離試試看",e:{mood:-4,stress:9},g:"",run:()=>{if(roll(0.45)){S.partner.aff+=6;logit("一個月見一次，但你們撐住了。","good")}else{S.partner=null;S.exes++;add("mood",-14);logit("撐了一年半，最後是在電話裡結束的。","bad",true)}}},
+      {l:"好聚好散",e:{mood:-12,intel:3},g:"",run:()=>{S.partner=null;S.exes++}}]},
+
+  {id:"meetfam",w:7,when:()=>S.partner&&!married()&&S.partner.aff>44&&S.age>=22,
+   t:"要見家長了",d:"對方說爸媽想看看你，叫你穿正式一點。",
+   c:[{l:"認真準備，帶伴手禮",e:{charm:4,stress:7,cash:-5},g:"",run:()=>{if(roll(0.7)){S.partner.aff+=12;add("mood",8);logit("他們很喜歡你，還叫你常來。","good")}else{S.partner.aff-=10;add("mood",-9);logit("氣氛一直很僵，問題一題比一題尖。","bad")}}},
+      {l:"照平常的樣子去",e:{mood:3},g:"",run:()=>{if(roll(0.45)){S.partner.aff+=8;logit("他們說你很自然，不做作。","good")}else{S.partner.aff-=15;logit("他們問你工作，你說「還在想」。","bad")}}},
+      {l:"找理由推掉",e:{mood:-5},g:"",run:()=>{S.partner.aff-=18}}]},
+
+  {id:"ex",w:6,when:()=>S.exes>=1&&S.age>=24&&S.age<=50,
+   t:"前任傳訊息來",d:"凌晨一點，只有兩個字：「在嗎」。",
+   c:[{l:"回，約出來見面",e:{mood:4,stress:12},g:"",run:()=>{
+        if (S.partner){ if(chance(0.5)){S.partner.aff-=28;logit("被現任發現了，吵到天亮。","bad")}else{add("mood",-6);logit("見了一面，什麼都沒改變。")} }
+        else if (roll(0.4)){ S.partner=partnerNew(62); add("mood",12); logit("你們又在一起了，這次比較小心。","good",true); }
+        else { add("mood",-10); logit("聊了三小時，才確定當初分手是對的。","bad"); }
+      }},
+      {l:"已讀不回",e:{mood:-3,intel:3},g:"你放下手機，又拿起來看了三次。"},
+      {l:"封鎖",e:{mood:4,stress:-6},g:"乾淨俐落。"}]},
+
+  {id:"accident",w:7,when:()=>S.partner&&!married()&&S.age>=19&&S.age<=36&&S.kids.length<3,
+   t:"驗孕棒是兩條線",d:"你們都還沒準備好。",
+   c:[{l:"結婚，把小孩生下來",e:{mood:6,cash:-50,stress:18},g:"",run:()=>{S.partner.married=true;S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:70});badge("奉子成婚");logit("婚禮辦得很趕，但你們笑得很開心。","good",true)}},
+      {l:"生，但先不結婚",e:{mood:2,cash:-35,stress:14,social:-6},g:"",run:()=>{S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:70});logit("你們一起帶小孩，只是沒有那張紙。",null,true)}},
+      {l:"討論後決定不要",e:{mood:-15,health:-6,stress:16},g:"",run:()=>{S.partner.aff-=12;logit("那之後你們有一陣子不太說話。","bad")}}]},
+
+  {id:"infert",w:7,when:()=>married()&&S.kids.length===0&&S.age>=31&&S.age<=44&&!S.flags.nokid,
+   t:"試了三年都沒消息",d:"醫生說可以做人工，但不保證。",
+   c:[{l:"做試管，砸錢砸時間",e:{health:-8,mood:-8,cash:-180,stress:22},g:"",run:()=>{
+        if (roll(0.45)){S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:75});add("mood",26);badge("求來的孩子");logit("第四次，成功了。","good",true)}
+        else {add("mood",-18);S.partner.aff-=8;logit("試了四次，最後決定停下來。","bad",true)}}},
+      {l:"去領養",e:{mood:14,cash:-40,stress:8},g:"",run:()=>{S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age-2,bond:65});badge("領養");logit("家裡多了一個人，從第一天就是你的小孩。","good",true)}},
+      {l:"接受兩個人就好",e:{mood:7,stress:-12},g:"",run:()=>{S.flags.nokid=true;S.partner.aff=Math.min(100,S.partner.aff+8)}}]},
+
+  {id:"spouseJob",w:6,when:()=>married()&&S.age>=30&&S.age<=56,
+   t:"另一半失業了",dyn:()=>S.partner.name+"的公司收掉了，他已經在家三個月。",
+   c:[{l:"你扛，叫他慢慢找",e:{stress:14,mood:-5},g:"",run:()=>{money(-60);S.partner.aff=Math.min(100,S.partner.aff+16)}},
+      {l:"催他隨便先找一個",e:{mood:-6,stress:8},g:"",run:()=>{S.partner.aff-=16;money(20)}},
+      {l:"一起重新規劃",e:{mood:4,intel:4,cash:-30},g:"",run:()=>{S.partner.aff=Math.min(100,S.partner.aff+10);if(roll(0.5)){money(80);logit("他後來找到更好的工作。","good")}}}]},
+
+  {id:"roommate",w:7,when:()=>married()&&(S.age-S.partner.since)>=11&&S.partner.aff<72,
+   t:"你們愈來愈像室友",d:"上一次好好說話是什麼時候，你想不起來。",
+   c:[{l:"安排一趟兩個人的旅行",e:{mood:11,cash:-60,stress:-14},g:"",run:()=>{S.partner.aff=Math.min(100,S.partner.aff+20)}},
+      {l:"去做伴侶諮商",e:{mood:5,cash:-30,stress:-8},g:"",run:()=>{S.partner.aff=Math.min(100,S.partner.aff+(roll(0.65)?26:4))}},
+      {l:"就這樣吧，日子還是要過",e:{mood:-7},g:"",run:()=>{S.partner.aff-=14}}]},
+
+  {id:"emigrate",w:5,when:()=>married()&&S.age>=30&&S.age<=48,
+   t:"另一半想出國定居",d:"他找了一堆資料，眼睛發亮地跟你講了一整晚。",
+   c:[{l:"一起走",e:{mood:10,charm:6,intel:6,cash:-250,stress:20,social:-18},g:"",run:()=>{S.partner.aff=Math.min(100,S.partner.aff+16);badge("移民");if(S.job)S.job.pay=Math.round(S.job.pay*rnd(0.8,1.5));logit("你們把家當塞進三個行李箱。",null,true)}},
+      {l:"說服他留下",e:{mood:-4,stress:8},g:"",run:()=>{S.partner.aff-=18}},
+      {l:"讓他先去，你留著",e:{mood:-8,stress:12},g:"",run:()=>{S.partner.aff-=26;logit("太平洋兩邊，時差十五個小時。","bad")}}]},
+
+  {id:"office",w:20,when:()=>atWork()&&single()&&S.age>=23&&S.age<=46,
+   t:"辦公室有人在追你",d:"每天早上你桌上都有一杯咖啡，沒有署名但你知道是誰。",
+   c:[{l:"答應看看",e:{mood:8,stress:6},g:"",run:()=>{S.partner=partnerNew(64);logit("跟同事"+S.partner.name+"在一起了，全公司三天內都知道。","good",true)}},
+      {l:"婉拒，同事難做",e:{mood:-3,intel:3,social:2},g:"咖啡隔天就沒了。"},
+      {l:"裝傻繼續喝",e:{mood:3,social:-5,stress:7},g:"氣氛變得有點怪。"}]},
+
+  {id:"spouseIll",w:6,when:()=>married()&&S.age>=50&&S.age<=78,
+   t:"另一半病了",dyn:()=>S.partner.name+"的檢查報告不太好，醫生說要長期治療。",
+   c:[{l:"辭掉工作全心照顧",e:{mood:-8,health:-6,stress:20},g:"",run:()=>{S.job=null;money(-120);S.partner.aff=Math.min(100,S.partner.aff+22);badge("守了一輩子")}},
+      {l:"請看護，你繼續上班",e:{mood:-10,cash:-180,stress:12},g:"",run:()=>{S.partner.aff-=6}},
+      {l:"兩邊硬撐",e:{health:-12,mood:-12,stress:26},g:"",run:()=>{money(-60);S.partner.aff=Math.min(100,S.partner.aff+10)}}]},
+
+  {id:"widow2",w:9,when:()=>S.flags.widowed&&S.age>=63&&single(),
+   t:"有人想介紹對象給你",d:"朋友說一個人過不是辦法。你說再看看，說了兩年。",
+   c:[{l:"見見也好",e:{mood:10,social:6},g:"",run:()=>{if(roll(0.55)){S.partner=partnerNew(60);badge("黃昏之戀");logit("這個年紀才發現，陪伴還是需要的。","good",true)}else add("mood",-4)}},
+      {l:"不想了，守著回憶",e:{mood:-3,stress:-5},g:"家裡的照片沒有換過。"},
+      {l:"把時間給孫子",e:{mood:9},g:"",run:()=>{S.kids.forEach(k=>k.bond=Math.min(100,k.bond+10))}}]},
+
+  {id:"kidleave",w:5,when:()=>S.kids.some(k=>S.age-k.born>=25),
+   t:"小孩說你管太多了",d:"他已經快三十歲了，你還是會問他幾點回家。",
+   c:[{l:"放手",e:{mood:-6,stress:-8},g:"",run:()=>{S.kids.forEach(k=>k.bond=Math.min(100,k.bond+14))}},
+      {l:"你是為他好",e:{mood:-4,stress:10},g:"",run:()=>{S.kids.forEach(k=>k.bond-=16)}},
+      {l:"道歉，然後學著閉嘴",e:{mood:4,intel:4},g:"",run:()=>{S.kids.forEach(k=>k.bond=Math.min(100,k.bond+8))}}]},
+
+  /* ---------- 人生岔路 ---------- */
+  {id:"army",w:16,when:()=>S.sex==="M"&&S.age>=18&&S.age<=24&&!S.flags.army&&stageKey()!=="uni"&&stageKey()!=="abroad",
+   t:"兵單來了",d:"信封上印著你的名字，入伍日期在兩個月後。",
+   c:[{l:"乖乖去當",e:{fit:12,health:4,social:7,mood:-6,intel:-3},g:"",run:()=>{S.flags.army=true;badge("當過兵");logit("剃了頭，在成功嶺曬了四個月。",null,true)}},
+      {l:"想辦法驗退",e:{mood:5,health:-6,social:-4,stress:10},g:"",run:()=>{S.flags.army=true;if(roll(0.5))logit("驗退成功，但家裡講了很久。");else{add("fit",12);logit("還是進去了，只是晚了半年。")}}},
+      {l:"考預官",e:{intel:5,charm:6,social:6,fit:8,stress:8},g:"",run:()=>{S.flags.army=true;badge("預官");logit("多念了一個月書，換來一條槓。",null,true)}}]},
+
+  {id:"dropout",w:9,when:()=>(stageKey()==="uni"||stageKey()==="grad")&&S.st.stress>70,
+   t:"你念不下去了",d:"課表還貼在牆上，但你已經兩個月沒去上課。",
+   c:[{l:"休學一年",e:{mood:14,stress:-36,intel:-4,cash:-20},g:"",run:()=>{S.uniEnd=(S.uniEnd||22)+1;S.gradEnd=(S.gradEnd||0)+1;badge("休學過");logit("你在便利商店上大夜，想了一整年。",null,true)}},
+      {l:"轉系重來",e:{mood:8,stress:-18,intel:3,cash:-25},g:"",run:()=>{S.major=pick(["理工","商管","文法","藝術"]);S.uniEnd=(S.uniEnd||22)+1;logit("轉去念"+S.major+"，重新開始。",null,true)}},
+      {l:"咬牙撐完",e:{intel:7,mood:-10,health:-6,stress:12},g:"你每天都在數還剩幾學分。"},
+      {l:"直接退學去工作",e:{mood:6,fit:3,stress:-30},g:"",run:()=>{S.path="work";S.degree="高中";S.uniTier="";logit("你沒拿到那張文憑，但也沒再回頭。",null,true)}}]},
+
+  {id:"famibiz",w:9,when:()=>S.origin.tag==="生意囝仔"&&S.age>=24&&S.age<=44,
+   t:"家裡要你回去接店",d:"爸爸的手開始會抖，他沒明講，只是一直問你最近忙不忙。",
+   c:[{l:"回去接",e:{mood:4,social:8,stress:14},g:"",run:()=>{S.job={t:"接家業",pay:Math.round(rnd(70,170)),pres:3,cat:"biz",gr:0.8,vol:0.35,years:0};badge("接了家業");logit("你站到了爸爸站了三十年的位置。",null,true)}},
+      {l:"拒絕，走自己的路",e:{mood:-10,stress:12,intel:3},g:"",run:()=>logit("店後來頂給別人了，爸爸什麼都沒說。","bad")},
+      {l:"幫忙轉型，但不全職",e:{intel:6,stress:16,cash:-40},g:"",run:()=>{if(roll(0.5)){money(160);logit("改走網路，生意比以前還好。","good")}else{money(-60);logit("投了錢改裝潢，客人還是那些。","bad")}}}]},
+
+  {id:"movecity",w:5,when:()=>S.age>=24&&S.age<=52&&!S.house,
+   t:"要不要搬到別的城市",d:"那邊機會比較多，但你一個人也不認識。",
+   c:[{l:"搬",e:{mood:-4,social:-12,stress:14},g:"",run:()=>{S.place=wpick(PLACES);if(S.job)S.job.pay=Math.round(S.job.pay*rnd(0.9,1.35));logit("你搬到了"+S.place.name+"。",null,true)}},
+      {l:"留在熟悉的地方",e:{mood:5,social:4,stress:-6},g:"你喜歡知道哪家早餐店好吃。"}]},
+
+  {id:"restudy",w:5,when:()=>S.age>=38&&S.age<=58&&S.money>=150,
+   t:"你想回學校念書",d:"在職專班的簡章在桌上放了兩個月。",
+   c:[{l:"報名，邊上班邊念",e:{intel:12,mood:3,cash:-90,stress:20,health:-4},g:"",run:()=>{if(DEG[S.degree]<3){S.degree="碩士";badge("中年碩士")}logit("四十幾歲重新當學生，班上最老的那個。",null,true)}},
+      {l:"買書自己看就好",e:{intel:5,mood:3,cash:-5},g:"書買了，看了三章。"},
+      {l:"算了，沒時間",e:{mood:-4},g:"簡章最後拿去墊泡麵。"}]},
+
+  {id:"fallen",w:6,when:()=>(S.origin.tag==="家境優渥"||S.origin.tag==="生意囝仔")&&S.age>=19&&S.age<=40,
+   t:"家裡出事了",d:"爸爸的投資（或保證）出了問題，你第一次看到他低頭。",
+   c:[{l:"把積蓄拿出來救",e:{mood:-10,stress:20},g:"",run:()=>{money(-Math.max(S.money,0)*0.8);if(roll(0.4)){money(220);logit("撐過去了，家裡元氣大傷但還在。")}else logit("錢丟進去，連個水花都沒有。","bad")}},
+      {l:"你有你的人生",e:{mood:-14,social:-10,stress:12},g:"",run:()=>logit("你搬出去住，那年過年沒回家。","bad",true)},
+      {l:"一起想辦法還",e:{mood:-6,intel:5,stress:18},g:"",run:()=>{money(-80);S.flags.loan=(S.flags.loan||0)+8;logit("你扛了一部分債，分十年還。",null,true)}}]},
+
+  {id:"lotto",w:2,when:()=>S.age>=20&&S.st.luck>=60,
+   t:"你對了一下樂透",d:"號碼對到第四個的時候，你的手開始抖。",
+   c:[{l:"繼續對下去",e:{},g:"",run:()=>{
+        if (roll(0.14)){ money(rnd(800,3000)); add("mood",30); badge("中過大獎"); logit("頭獎區間。你在廁所裡待了二十分鐘才出來。","good",true); }
+        else if (roll(0.5)){ money(rnd(20,80)); add("mood",10); logit("中了小獎，請全辦公室喝飲料。","good"); }
+        else { add("mood",-4); logit("差一個號碼。","bad"); }
+      }}]},
+
+  {id:"midswitch",w:6,when:()=>atWork()&&S.age>=36&&S.age<=54&&S.st.mood<55,
+   t:"你受夠這一行了",d:"做了快二十年，早上睜開眼第一個念頭是「又要去」。",
+   c:[{l:"砍掉重練，轉完全不同的行業",e:{mood:14,stress:-14,intel:5},g:"",run:()=>{
+        const pool=JOBS.filter(j=>jobOK(j)&&j.cat!==S.job.cat);
+        if(pool.length){const j=pick(pool);const old=S.job.pay;takeJob(j);S.job.pay=Math.round(Math.max(S.job.pay*0.65,old*0.5));logit("從頭做起，薪水砍了一截，但你睡得著了。",null,true)}
+      }},
+      {l:"換公司不換行",e:{mood:5,stress:4},g:"",run:()=>{S.job.pay=Math.round(S.job.pay*rnd(1.0,1.25));S.job.years=0}},
+      {l:"忍到退休",e:{mood:-9,stress:14},g:"你把倒數的日子寫在便條紙上。"}]}
+];
+
+/* ===================== 時代衝擊：每一輪碰到的大事不一樣 ===================== */
+const ERA = [
+  {id:"crash",w:4,when:()=>S.age>=22,
+   t:"金融海嘯",d:"新聞整年都是紅字，你認識的人有一半在找工作。",
+   c:[{l:"抱緊處理",e:{mood:-10,stress:16},g:"",run:()=>{money(-Math.max(S.money,0)*0.32);S.econ=-1;S.econUntil=S.age+4;
+        if(S.job&&chance(0.28)){S.job=null;logit("公司收了，你也被放出來。","bad",true)}}},
+      {l:"趁低點加碼",e:{stress:22},g:"",run:()=>{const amt=Math.max(S.money,0)*0.5;money(-amt);S.econ=-1;S.econUntil=S.age+4;
+        if(roll(0.5)){money(amt*rnd(1.8,3.2));add("mood",16);badge("抄到底部");logit("兩年後回頭看，那是你人生最好的一筆。","good",true)}
+        else{add("mood",-20);logit("下去之後還有更下面。","bad",true)}}},
+      {l:"全部賣掉換現金",e:{mood:-6,stress:-6},g:"",run:()=>{money(-Math.max(S.money,0)*0.12);S.econ=-1;S.econUntil=S.age+4;logit("你保住了本金，也錯過了之後的反彈。")}}]},
+
+  {id:"plague",w:4,when:()=>S.age>=14,
+   t:"一場大疫情",d:"街上空了，學校停課，口罩要排隊買。",
+   c:[{l:"乖乖關在家裡",e:{health:4,mood:-14,fit:-8,social:-10,stress:12},g:"",run:()=>{
+        if(S.job&&(S.job.cat==="svc"||S.job.cat==="create"||S.job.cat==="free")){S.job.pay=Math.round(S.job.pay*0.6);logit("你這行最先被砍，收入腰斬。","bad")}
+        if(S.job&&S.job.cat==="med"){add("health",-10);add("stress",22);logit("醫院是最前線，你兩個月沒回家。","bad")}}},
+      {l:"照常生活，小心一點",e:{mood:4,social:3},g:"",run:()=>{if(!roll(0.6)){add("health",-16);getIll("長新冠");logit("你確診了，咳了半年還沒好。","bad",true)}}},
+      {l:"趁機轉線上",e:{intel:7,mood:2,stress:10},g:"",run:()=>{if(S.job){S.job.pay=Math.round(S.job.pay*rnd(0.9,1.4))}if(roll(0.4)){money(120);logit("你做的線上生意意外起飛。","good")}}}]},
+
+  {id:"ai",w:4,when:()=>S.age>=24,
+   t:"整個產業被技術洗了一遍",d:"一夜之間，很多工作的做法都不一樣了。",
+   c:[{l:"砸時間學新東西",e:{intel:10,mood:-4,stress:16,cash:-30},g:"",run:()=>{if(S.job){S.job.pay=Math.round(S.job.pay*rnd(1.1,1.5));logit("你變成部門裡少數會用的人。","good")}}},
+      {l:"靠經驗撐著",e:{mood:-6,stress:10},g:"",run:()=>{if(S.job){S.job.pay=Math.round(S.job.pay*rnd(0.7,0.95));if(chance(0.2)){S.job=null;logit("你的職位整個被取消了。","bad",true)}}}},
+      {l:"乾脆換到不會被取代的行業",e:{mood:3,stress:12},g:"",run:()=>{const pool=JOBS.filter(j=>jobOK(j)&&(j.cat==="svc"||j.cat==="labor"||j.cat==="med"));
+        if(pool.length){takeJob(pick(pool));logit("改做"+S.job.t+"，機器一時半刻還搶不走。",null,true)}}}]},
+
+  {id:"housing",w:4,when:()=>S.age>=26,
+   t:"房價在兩年內漲了快一倍",d:"同一棟樓，你去年看的那間現在多了八百萬。",
+   c:[{l:()=>S.house?"賣掉換現金":"硬著頭皮進場",e:{stress:14},g:"",run:()=>{
+        if(S.house){money(rnd(400,900));S.house=null;S.flags.loan=0;add("mood",10);badge("賣在高點");logit("你把房子賣了，帳戶數字很好看，但要重新找地方住。","good",true)}
+        else{money(-Math.max(S.money,0)*0.9);S.house="市區";S.flags.loan=32;add("mood",-6);badge("有殼族");logit("你用掉所有積蓄跟三十年，換到一間。",null,true)}}},
+      {l:()=>S.house?"住著就好，不管它":"算了，繼續租",e:{},g:"",run:()=>{
+        if(S.house){add("mood",6)} else {add("mood",-12);add("stress",10);logit("你算了一下，決定這輩子不買了。","bad")}}},
+      {l:"搬去房價便宜的地方",e:{mood:3,social:-10,stress:8},g:"",run:()=>{S.place=wpick(PLACES);logit("你搬到了"+S.place.name+"，生活費一下子輕了很多。",null,true)}}]},
+
+  {id:"quake",w:3,when:()=>S.age>=10,
+   t:"一場大地震",d:"半夜整棟樓在搖，你抓著門框站了四十秒。",
+   c:[{l:"全家平安，但家裡全毀",e:{mood:-10,stress:18,cash:-120},g:"人沒事就好。"},
+      {l:"你受了傷",e:{health:-18,mood:-12,stress:16},g:"",run:()=>{getIll("舊傷")}},
+      {l:"去當志工幫忙",e:{mood:6,social:10,fit:4,health:-5,stress:10},g:"",run:()=>badge("災後志工")}]}
 ];
 
 /* ===================== 里程碑 ===================== */
@@ -909,8 +1164,9 @@ function milestone(){
   if (a === 12) return junior();
   if (a === 15) return exam15();
   if (a === 18) return exam18();
-  if (a === 22 && S.path === "uni") return afterUni();
-  if (a === 24 && (S.path === "grad" || S.path === "abroad")) return afterGrad();
+  if (a === 19 && S.flags.redo){ S.flags.redo = false; return exam18(); }
+  if (S.path === "uni" && a === (S.uniEnd||22)) return afterUni();
+  if ((S.path === "grad" || S.path === "abroad") && a === (S.gradEnd||24)) return afterGrad();
   if (a >= 18 && stageKey() === "work" && !S.job && !S.retired) return findJob();
   return null;
 }
@@ -922,28 +1178,61 @@ function junior(){
   }
   logit("升上國中，制服永遠大一號。",null,true); return null;
 }
+// 考試不是智力的直接投影：臨場、壓力、睡眠、準備都算進去
+function examScore(){
+  let v = S.st.intel * 0.92;
+  if (S.flags.cram) v += 7;
+  if (S.flags.gifted) v += 6;
+  if (S.flags.repeat) v += 6;
+  if (S.school === "第一志願") v += 7;
+  else if (S.school === "前段高中") v += 3;
+  if (S.flags.voc) v -= 7;
+  if (S.focus === "用功讀書" || S.focus === "專心學業") v += 5;
+  v -= Math.max(0, S.st.stress - 58) * 0.3;
+  if (ill("失眠")) v -= 5;
+  if (ill("憂鬱症")) v -= 11;
+  v += (S.st.luck - 50) * 0.14;
+  v += rnd(-17, 17);
+  return v;
+}
 function exam15(){
-  const sc = S.st.intel + (S.st.luck-50)*0.2 + rnd(-12,12);
-  let school, eff;
-  if (sc > 78){ school="第一志願"; eff={mood:14,social:5,stress:10}; }
-  else if (sc > 58){ school="社區高中"; eff={mood:5}; }
-  else { school="高職"; eff={mood:-3,fit:4,stress:-6}; S.flags.voc = true; }
+  const sc = examScore();
+  let school, eff, note;
+  if (sc > 93){ school="第一志願"; eff={mood:16,social:6,stress:12}; note="全校只有幾個人上得了。"; badge("第一志願"); }
+  else if (sc > 80){ school="前段高中"; eff={mood:10,stress:6}; note="差一點點，但也很不錯了。"; }
+  else if (sc > 64){ school="社區高中"; eff={mood:3}; note="離家近，也沒什麼不好。"; }
+  else if (sc > 48){ school="後段高中"; eff={mood:-6,stress:-4}; note="班上沒幾個人在念書。"; }
+  else { school="高職"; eff={mood:-4,fit:5,stress:-8}; S.flags.voc=true; note="你開始摸到真的機器。"; }
   S.school = school;
-  return {t:"會考成績出來了", d:"你的分數落在 "+school+"。全家圍著電腦看榜單。",
-    c:[{l:"接受，去念 "+school,e:eff,g:"新制服比舊制服好看一點。"}]};
+  return {t:"會考成績出來了", d:"你的分數落在 "+school+"。"+note,
+    c:[{l:"接受，去念 "+school, e:eff, g:"新制服比舊制服好看一點。"}]};
+}
+function enterUni(tier){
+  S.path="uni"; S.uniTier=tier; S.uniEnd=S.age+4;
+  if (tier==="頂大") badge("頂大畢業");
+  chooseMajor();
 }
 function exam18(){
   S.degree = "高中";
-  const sc = S.st.intel + (S.school==="第一志願"?10:0) + (S.st.luck-50)*0.15 + rnd(-10,10);
-  const opts = [];
-  if (sc > 55) opts.push({l:"考上大學，去念",e:{mood:10},g:"",run:()=>{S.path="uni";chooseMajor()}});
-  else opts.push({l:"分數只夠私立科大",e:{mood:2,cash:-30},g:"",run:()=>{S.path="uni";chooseMajor()}});
-  if (sc > 72) opts.push({l:"申請出國念書",e:{intel:8,charm:8,mood:6,cash:-350,stress:14},g:"",run:()=>{
-    S.path="abroad"; S.major=pick(["理工","商管","文法","藝術"]); badge("留過學");
-    logit("你一個人拖著行李到了很遠的地方。",null,true); }});
+  const sc = examScore();
+  let tier, td;
+  if (sc > 92){ tier="頂大"; td="落點在台成清交那幾間。"; }
+  else if (sc > 78){ tier="國立"; td="落點在中字輩的國立大學。"; }
+  else if (sc > 60){ tier="私立"; td="上得了私立大學，但學費不便宜。"; }
+  else { tier="科大"; td="剩下的志願只有私立科大。"; }
+  const opts = [{
+    l:"去念"+tier+"大學",
+    e:{mood: tier==="頂大"?15:tier==="國立"?9:tier==="私立"?2:-2, cash: tier==="私立"?-40:tier==="科大"?-30:0},
+    g:"", run:()=>enterUni(tier)
+  }];
+  if (sc > 70 && S.money > 220) opts.push({l:"申請出國念書",e:{intel:8,charm:8,mood:6,cash:-350,stress:14},g:"",run:()=>{
+    S.path="abroad"; S.gradEnd=S.age+6; S.uniTier="國立"; S.major=pick(["理工","商管","文法","藝術"]);
+    badge("留過學"); logit("你一個人拖著行李到了很遠的地方。",null,true); }});
   opts.push({l:"不念了，直接工作",e:{mood:-2,fit:4},g:"",run:()=>{S.path="work";logit("十八歲開始上班，同學還在補習。",null,true)}});
-  opts.push({l:"重考一年拚看看",e:{mood:-12,intel:10,cash:-45,stress:20},g:"",run:()=>{S.path="uni";badge("重考過");chooseMajor()}});
-  return {t:"學測放榜",d:"級分單在手上，整個人生好像被印成一張紙。",c:opts};
+  if (!S.flags.repeat) opts.push({l:"重考一年拚看看",e:{mood:-12,intel:7,cash:-45,stress:20},g:"",run:()=>{
+    S.flags.repeat=true; S.flags.redo=true; S.path="repeat";
+    logit("你退掉所有志願，開始第二次。",null,true); }});
+  return {t:"學測放榜",d:td+"級分單在手上，整個人生好像被印成一張紙。",c:opts};
 }
 function chooseMajor(){
   const opts = [
@@ -952,35 +1241,46 @@ function chooseMajor(){
     {l:"文法",e:{intel:7,charm:4,mood:2},g:"讀了很多別人覺得沒用的書。",run:()=>{S.major="文法"}},
     {l:"藝術設計",e:{charm:11,mood:5,intel:2,cash:-30},g:"你的作品被貼在系館走廊。",run:()=>{S.major="藝術"}}
   ];
-  if (S.st.intel > 82) opts.push({l:"醫學系",e:{intel:10,mood:-10,health:-4,stress:22},g:"接下來七年你沒什麼假。",run:()=>{S.major="醫學";badge("醫學生")}});
+  if (S.st.intel > 78 && TIER[S.uniTier] >= 2) opts.push({l:"醫學系",e:{intel:10,mood:-10,health:-4,stress:22},g:"接下來七年你沒什麼假。",run:()=>{S.major="醫學";S.uniEnd=S.age+6;badge("醫學生")}});
   pending = {t:"要念哪個科系",d:"選填志願的那一晚，你一直在改順序。",c:opts};
 }
 function afterUni(){
   S.degree = "大學";
   const opts = [{l:"直接找工作",e:{},g:"",run:()=>{S.path="work"}}];
-  if (S.st.intel > 62) opts.push({l:"念研究所",e:{intel:10,mood:-5,cash:-60,stress:12},g:"",run:()=>{S.path="grad";badge("研究所")}});
+  if (S.st.intel > 62) opts.push({l:"念研究所",e:{intel:10,mood:-5,cash:-60,stress:12},g:"",run:()=>{S.path="grad";S.gradEnd=S.age+2;badge("研究所")}});
   opts.push({l:"考公職",e:{intel:6,mood:-8,cash:-30,stress:16},g:"",run:()=>{
     S.path = "work";
-    if (roll(S.st.intel/95)){ takeJob({t:"公務員",pay:68,pres:3}); logit("考上了，鐵飯碗到手。","good",true); }
+    if (roll(S.st.intel/95)){ takeJob({t:"公務員",pay:68,pres:3,cat:"gov",gr:0.4}); logit("考上了，鐵飯碗到手。","good",true); }
     else { add("mood",-10); logit("考了兩年沒上，先去找工作。","bad",true); }
   }});
-  if (S.st.charm > 70) opts.push({l:"當全職創作者",e:{mood:10,charm:6},g:"",run:()=>{S.path="work";takeJob({t:"YouTuber",pay:45,pres:2})}});
+  if (S.st.charm > 70) opts.push({l:"當全職創作者",e:{mood:10,charm:6},g:"",run:()=>{S.path="work";takeJob({t:"YouTuber",pay:45,pres:2,cat:"free",gr:1.2,vol:0.85})}});
   return {t:"大學畢業了",d:"撥穗那天雨很大，你突然不知道明天要幹嘛。",c:opts};
 }
 function afterGrad(){
   S.degree = "碩士"; S.path = "work";
-  if (S.st.intel > 88 && chance(0.45)) return {
+  if (S.st.intel > 84 && chance(0.45)) return {
     t:"教授問你要不要念博士",d:"他說你是這幾年最好的學生之一。",
-    c:[{l:"念下去",e:{intel:12,mood:-12,cash:-40,stress:18},g:"",run:()=>{S.degree="博士";badge("博士");logit("又多讀了四年，頭髮少了一些。",null,true)}},
+    c:[{l:"念下去",e:{intel:12,mood:-12,cash:-40,stress:18},g:"",run:()=>{S.degree="博士";S.gradEnd=S.age+4;S.path="grad";badge("博士");logit("又多讀了四年，頭髮少了一些。",null,true)}},
        {l:"先去工作",e:{mood:5},g:"你想先賺點錢。"}]};
   logit("碩士畢業，履歷終於可以寫滿一頁。",null,true); return null;
 }
 function findJob(){
-  const ok = JOBS.filter(jobOK).sort((a,b)=>b.pay-a.pay).slice(0,3);
-  if (!ok.length) ok.push(JOBS[0]);
-  const opts = ok.map(j => ({l:j.t+"（年薪 "+j.pay+" 萬）",e:{},g:"",run:()=>{takeJob(j);logit("開始當"+j.t+"。",null,true)}}));
+  const pool = JOBS.filter(jobOK), picks = [];
+  while (picks.length < 3 && pool.length){      // 依薪水加權隨機，同樣條件每次開出的缺不一樣
+    const w = pool.map(j => Math.pow(j.pay, 1.5));
+    let r = Math.random() * w.reduce((a,b)=>a+b,0), i = 0;
+    for (; i < pool.length-1; i++){ r -= w[i]; if (r <= 0) break; }
+    picks.push(pool.splice(i,1)[0]);
+  }
+  if (!picks.length) picks.push(JOBS[0]);
+  const opts = picks.map(j => {
+    const tm = {"頂大":1.16,"國立":1.06,"私立":0.97,"科大":0.92}[S.uniTier] || 1;
+    const show = Math.round(j.pay * tm * (1 + S.econ*0.06));
+    return {l:j.t+"（年薪約 "+show+" 萬）",e:{},g:"",run:()=>{takeJob(j);logit("開始當"+j.t+"，年薪 "+S.job.pay+" 萬。",null,true)}};
+  });
   opts.push({l:"再休息一陣子",e:{mood:6,cash:-20},g:"你說你在沉澱。"});
-  return {t:"找工作",d:"投了四十幾封履歷，有回音的有這幾個。",c:opts};
+  const mood = S.econ < 0 ? "景氣不好，投了快一百封才有這幾個。" : "投了四十幾封履歷，有回音的有這幾個。";
+  return {t:"找工作",d:mood,c:opts};
 }
 
 function divorce(){
@@ -1001,7 +1301,7 @@ function applyEff(e){
 function yearlyFocus(){
   const f = S.focus; if (!f || !FOCUS[f]) return;
   applyEff(FOCUS[f]);
-  if (f === "投資理財" && S.money > 0) money(S.money * (rnd(-0.21,0.26) + (S.st.intel-50)/900 + (S.st.luck-50)/1400));
+  if (f === "投資理財" && S.money > 0) money(S.money * (rnd(-0.21,0.26) + (S.st.intel-50)/900 + (S.st.luck-50)/1400 + S.econ*0.045));
   if (f === "談戀愛" || f === "偷偷戀愛" || f === "陪伴家人"){
     if (S.partner) S.partner.aff = Math.min(100, S.partner.aff + 9);
     S.kids.forEach(k => k.bond = Math.min(100, k.bond + 8));
@@ -1010,17 +1310,33 @@ function yearlyFocus(){
   if (f === "朋友社交" && S.friend) S.friend.bond = Math.min(100, S.friend.bond + 8);
 }
 function yearlyEconomy(){
+  // 大環境會自己起伏，每一輪人生碰到的景氣都不一樣
+  if (S.age >= S.econUntil){
+    const prev = S.econ;
+    S.econ = wpick([{v:-1,w:3},{v:0,w:5},{v:1,w:3}]).v;
+    S.econUntil = S.age + ri(5,11);
+    if (S.age >= 20 && S.econ !== prev){
+      if (S.econ === 1) logit("景氣轉好，到處都在徵人。","good");
+      else if (S.econ === -1) logit("景氣變差，新聞每天都在講裁員。","bad");
+    }
+  }
   const k = stageKey();
   if (k === "work" && S.job){
+    const jb = S.job;
     const mul = S.focus === "拼事業" ? 1.25 : S.focus === "摸魚度日" ? 0.95 : 1;
-    money(S.job.pay * mul);
-    S.job.years++;
-    const pr = (S.focus === "拼事業" ? 0.30 : 0.12) + (S.st.intel + S.st.social)/900;
-    if (S.job.years >= 3 && roll(pr)){
-      S.job.pay = Math.round(S.job.pay * rnd(1.08,1.22));
-      S.job.years = 1; logit("升職加薪，年薪變 "+S.job.pay+" 萬。","good");
+    let inc = jb.pay * mul;
+    if (jb.vol) inc *= rnd(1-jb.vol, 1+jb.vol);   // 接案、業務、創作收入會跳
+    money(inc);
+    jb.years++;
+    const pr = ((S.focus === "拼事業" ? 0.26 : 0.09) * (jb.gr||1)
+                + (S.st.intel + S.st.social)/1600) * (1 + S.econ*0.45);
+    if (jb.years >= 3 && roll(pr)){
+      jb.pay = Math.round(jb.pay * rnd(1.07,1.2)); jb.years = 1;
+      logit(RAISE[jb.cat] ? RAISE[jb.cat]() : "升職加薪，年薪變 "+jb.pay+" 萬。","good");
     }
-    if (S.focus === "摸魚度日" && chance(0.07)){ logit("被委婉地請走了。","bad",true); S.job = null; }
+    if (S.focus === "摸魚度日" && chance(0.06 + (S.econ<0?0.05:0))){
+      logit("被委婉地請走了。","bad",true); S.job = null;
+    }
   }
   if (k === "retire") money(rnd(18,32));
   let cost = 0;
@@ -1052,6 +1368,8 @@ function yearlyDrift(){
   if (ill("失眠"))   { add("health",-1.2); add("mood",-2.5); add("intel",-0.6); }
   if (ill("腰傷"))   { add("fit",-1.8); }
   if (ill("憂鬱症")) { add("mood",-5); add("social",-1.5); }
+  if (ill("長新冠")) { add("fit",-1.5); add("health",-1); }
+  if (ill("舊傷"))   { add("fit",-1.2); add("health",-0.6); }
   if (ill("近視") && a < 25) add("intel",0.3);
 
   S.st.mood += (58 - S.st.mood) * 0.07;
@@ -1059,9 +1377,11 @@ function yearlyDrift(){
 
   if (S.partner){
     const f = S.focus;
-    if (f !== "陪伴家人" && f !== "談戀愛" && f !== "偷偷戀愛") S.partner.aff -= rnd(1.5,4);
-    if (S.partner.married && S.partner.aff < 15 && chance(0.45)) divorce();
-    else if (!S.partner.married && S.partner.aff < 18){
+    if (f !== "陪伴家人" && f !== "談戀愛" && f !== "偷偷戀愛"){
+      S.partner.aff -= S.partner.married ? rnd(0.4,1.9) : rnd(0.9,2.4);
+    }
+    if (S.partner.married && S.partner.aff < 12 && chance(0.4)) divorce();
+    else if (!S.partner.married && S.partner.aff < 14){
       logit("你們淡掉了，最後一則訊息沒人回。","bad",true); S.partner = null; S.exes++;
     }
   }
@@ -1099,12 +1419,14 @@ function deathCheck(){
   return false;
 }
 function safe(fn){ try { return !!fn(); } catch(e){ return false; } }
+const W = e => typeof e.w === "function" ? e.w() : (e.w || 1);
 function weighted(pool){
-  const tot = pool.reduce((s,e)=>s+(e.w||1),0); let r = Math.random()*tot;
-  for (const e of pool){ r -= (e.w||1); if (r<=0) return e; }
+  const tot = pool.reduce((s,e)=>s+W(e),0); let r = Math.random()*tot;
+  for (const e of pool){ r -= W(e); if (r<=0) return e; }
   return pool[0];
 }
-const REPEATABLE = {invest:1, scam:1, affair:1, bully:1, picky:1};
+const REPEATABLE = {invest:1,scam:1,affair:1,bully:1,picky:1,ex:1,lotto:1,movecity:1,spouseJob:1,roommate:1,layoff:1,jump:1,
+  confess:1,blind:1,office:1,netdate:1,kid:1,propose:1,meetfam:1,ldr:1,accident:1,kidart:1,kidleave:1,spouseIll:1};
 
 function advanceYear(){
   if (!S || !S.alive) return;
@@ -1115,8 +1437,17 @@ function advanceYear(){
   const m = milestone();
   if (m) pending = m;
   else if (!crisisCheck()){
-    const dense = S.age <= 18 ? 0.46 : 0.3;      // 前十八年事件更密
-    if (chance(dense)){
+    // 時代衝擊：一輩子最多碰上三次
+    if (S.age >= 14 && (S.flags.eraCount||0) < 3 && chance(0.055)){
+      const ep = ERA.filter(e => !S.seen["era_"+e.id] && safe(e.when));
+      if (ep.length){
+        const ev = weighted(ep);
+        S.seen["era_"+ev.id] = true; S.flags.eraCount = (S.flags.eraCount||0)+1;
+        pending = {t:ev.t, d:ev.d, c:ev.c};
+      }
+    }
+    const dense = S.age <= 18 ? 0.46 : 0.42;      // 前十八年事件更密
+    if (!pending && chance(dense)){
       const pool = CHOICE.filter(e => (!S.seen[e.id] || REPEATABLE[e.id]) && safe(e.when));
       if (pool.length){
         const ev = weighted(pool); S.seen[ev.id] = true;
@@ -1127,8 +1458,9 @@ function advanceYear(){
       const pool = AUTO.filter(e => safe(e.when));
       if (pool.length){
         const ev = weighted(pool);
+        const txt = ev.dt ? ev.dt() : ev.t;
         applyEff(ev.e); if (ev.run) ev.run();
-        logit(ev.t, ev.tone);
+        logit(txt, ev.tone);
       }
     }
   }
@@ -1188,7 +1520,7 @@ function showEnd(){
     '<div class="score">'+v+'</div>'+
     '<div class="grid">'+
       row("出身", S.origin.tag) + row("家鄉", S.place.name) +
-      row("學歷", S.degree) + row("最後職業", S.job ? S.job.t : (S.retired?"退休":"無")) +
+      row("學歷", (S.uniTier?S.uniTier+"／":"")+S.degree) + row("最後職業", S.job ? S.job.t : (S.retired?"退休":"無")) +
       row("資產", fmtMoney(S.money)) + row("子女", S.kids.length+" 人") +
       row("健康", Math.round(S.st.health)) + row("心情", Math.round(S.st.mood)) +
     '</div>'+
@@ -1284,7 +1616,8 @@ function openEvent(){
   const box = $("evChoices"); box.innerHTML = "";
   ev.c.forEach(ch => {
     const b = document.createElement("button");
-    b.innerHTML = ch.l + (ch.g ? '<small>'+ch.g+'</small>' : '');
+    const label = typeof ch.l === "function" ? ch.l() : ch.l;
+    b.innerHTML = label + (ch.g ? '<small>'+ch.g+'</small>' : '');
     b.onclick = () => {
       $("event").classList.remove("on");
       pending = null;

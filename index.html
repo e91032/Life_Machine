@@ -261,7 +261,7 @@ body{
         <div class="choices">
           <button id="btnStart">開始這一生</button>
           <button id="btnReroll">重新投胎 <small id="rerollLeft">還可以換 3 次</small></button>
-          <button id="btnHeavy">沉重劇情：開 <small>性騷擾、性侵與創傷相關的情節</small></button>
+          <button id="btnHeavy">沉重劇情：開 <small>性騷擾、性侵、人口販運與創傷相關的情節</small></button>
         </div>
       </div>
 
@@ -375,6 +375,7 @@ const OUTFIT = {
   night:  {c1:"#A8407C",c2:"#5E2450",ac:"#F5C542",sh:"#2E1E30"},
   gang:   {c1:"#333842",c2:"#20242C",ac:"#D4B46A",sh:"#16191E"},
   jail:   {c1:"#C9A14A",c2:"#8E6F2E",ac:"#6B6257",sh:"#4A443A"},
+  trapped:{c1:"#7E6A60",c2:"#4E423C",ac:"#A8564A",sh:"#2E2622"},
   retire: {c1:"#A4B0BE",c2:"#6F7883",ac:"#B8824A",sh:"#443F36"}
 };
 const SKINS = [["#F7D8BC","#DCB08E"],["#F1C69E","#D4A077"],["#E2AC7C","#C28C5C"],["#C98E62","#A6704A"]];
@@ -444,6 +445,7 @@ const TONE = {
   night:  {bg:"#3C1032",p:"#F5C542",f:"#1E0818"},
   gang:   {bg:"#272C36",p:"#D4B46A",f:"#14171C"},
   jail:   {bg:"#2E2A22",p:"#A89E80",f:"#211E18"},
+  trapped:{bg:"#2A2026",p:"#9E7A66",f:"#171114"},
   retire: {bg:"#2C3A30",p:"#9AC4A6",f:"#203026"}
 };
 // 每筆是 [x,y,w,h,透明度,可選顏色]
@@ -461,6 +463,8 @@ const SCENES = {
   night:[[44,10,3,16,1,"#F5C542"],[52,10,3,16,1,"#E8605D"],[60,10,3,16,1,"#7FD4E8"],[68,14,3,12,1,"#C97FE8"],
          [42,30,34,2,1,"#8E3468"],[46,33,4,9,.95,"#A8E0C0"],[58,33,4,9,.95,"#E8C070"]],
   gang:[[44,14,30,4,.45],[44,22,30,3,.45],[46,30,26,2,1],[48,32,2,10,1],[68,32,2,10,1],[52,24,7,6,.95,"#C9A961"]],
+  trapped:[[40,6,2,30,1,"#9E7A66"],[48,6,2,30,1,"#9E7A66"],[56,6,2,30,1,"#9E7A66"],
+           [38,6,22,2,1,"#9E7A66"],[64,24,14,10,1,"#3A2E34"],[66,26,10,6,1,"#6FA8DC"],[62,36,18,2,1,"#5E4A44"]],
   jail:[[42,6,2,36,1,"#9E9478"],[50,6,2,36,1,"#9E9478"],[58,6,2,36,1,"#9E9478"],[66,6,2,36,1,"#9E9478"],[74,6,2,36,1,"#9E9478"],[40,6,36,2,1,"#9E9478"]],
   retire:[[62,6,14,16,.8,"#5FA97C"],[68,22,2,20,1,"#8E6F42"],[42,34,16,2,1,"#A8744A"],[42,36,2,6,1,"#8E6F42"],[56,36,2,6,1,"#8E6F42"]]
 };
@@ -585,7 +589,7 @@ function newState(d){
     econ:0, econUntil:0,
     partner:null, kids:[], exes:0, friend:null,
     lover:null, debtKind:null, gang:0, jail:0, record:false, stigma:0,
-    orient:d.orient, out:0,
+    orient:d.orient, out:0, trapped:0, trapSite:"",
     hMax: d.sex === "F" ? (chance(.42)?0:chance(.62)?1:2) : (chance(.76)?0:1),
     aRisk: chance(d.sex === "F" ? 0.16 : 0.045),
     log:[], badges:{}, flags:{}, seen:{}, debtYears:0
@@ -624,6 +628,7 @@ function fmtMoney(m){
 /* ===================== 階段 ===================== */
 function stageKey(){
   const a = S.age;
+  if (S.trapped > 0) return "trapped";
   if (S.jail > 0) return "jail";
   if (S.retired) return "retire";
   if (a < 3) return "baby";
@@ -645,7 +650,8 @@ const STAGE_INFO = {
   senior:{n:"高中",s:"teen"}, uni:{n:"大學",s:"teen"},
   grad:{n:"研究所",s:"adult"}, abroad:{n:"留學中",s:"adult"},
   work:{n:"社會人",s:"adult"}, retire:{n:"退休",s:"elder"},
-  night:{n:"八大行業",s:"adult"}, gang:{n:"道上",s:"adult"}, jail:{n:"服刑中",s:"adult"}
+  night:{n:"八大行業",s:"adult"}, gang:{n:"道上",s:"adult"}, jail:{n:"服刑中",s:"adult"},
+  trapped:{n:"回不來",s:"adult"}
 };
 
 /* ===================== 重心 ===================== */
@@ -684,7 +690,11 @@ const FOCUS = {
   "服刑度日":{mood:-7,fit:-2,social:-5,stress:7},
   "獄中自修":{intel:8,mood:-3,stress:3},
   "獄中健身":{fit:9,health:3,mood:1,stress:-7},
-  "打通關係":{social:8,charm:3,mood:2,cash:-6}
+  "打通關係":{social:8,charm:3,mood:2,cash:-6},
+  "配合求生":{mood:-6,stress:12,health:-3,intel:2},
+  "偷偷求救":{intel:5,mood:2,stress:18,health:-5},
+  "裝病拖延":{health:-7,mood:-3,stress:10},
+  "找機會逃":{fit:5,mood:1,stress:20,health:-6}
 };
 const FOCUS_SETS = {
   baby:["餵養照顧","陪玩互動","早教啟蒙"],
@@ -699,7 +709,8 @@ const FOCUS_SETS = {
   retire:["養生保健","到處旅遊","含飴弄孫","重拾興趣"],
   night:["拼業績","少喝一點","存錢轉行","陪伴家人"],
   gang:["跑場子","低調度日","洗白事業","健身養生"],
-  jail:["服刑度日","獄中自修","獄中健身","打通關係"]
+  jail:["服刑度日","獄中自修","獄中健身","打通關係"],
+  trapped:["配合求生","偷偷求救","裝病拖延","找機會逃"]
 };
 
 /* ===================== 工作 ===================== */
@@ -1684,6 +1695,89 @@ const CHOICE = [
         S.kids.forEach(k=>k.bond=Math.min(100,k.bond+14)); badge("把話說清楚了")}},
       {l:"只叫他小心一點",e:{mood:2},g:"你講得很模糊，自己也知道。"},
       {l:"講不出口",e:{mood:-8,stress:10},g:"你拍拍他的頭，說沒事。"}]},
+/* ---------- 債務的盡頭：被賣掉 ---------- */
+  {id:"trapOffer",w:24,when:()=>heavy()&&!S.trapped&&!S.flags.wasTrapped&&S.age>=19&&S.age<=48&&(S.money<-180||S.debtKind==="錢莊"),
+   t:"有人說海外有份工作",d:"月薪二十萬，包吃包住，不用經驗。他說只要去半年，債就清了。",
+   c:[{l:"去",e:{stress:14},g:"",run:()=>{
+        if (roll(0.46)){ money(rnd(80,200)); add("mood",10);
+          logit("工作很操但是真的，你匯了幾筆錢回家。","good",true); }
+        else { S.trapSite=pick(["園區","境外機房","工廠宿舍"]); S.trapped=1; S.job=null;
+          badge("被騙出去過");
+          logit("下飛機就被收走護照。到第三天你才發現，這裡的門是從外面鎖的。","bad",true); }}},
+      {l:"先查一下這間公司",e:{intel:6,stress:4},g:"",run:()=>{
+        if (roll(0.8)) logit("查到一堆受害者的貼文，你把對話刪掉了。","good");
+        else { S.trapSite=pick(["園區","境外機房"]); S.trapped=1; S.job=null; badge("被騙出去過");
+          logit("查不到什麼不對勁。一個月後你才知道，公司名字是前一週才登記的。","bad",true); }}},
+      {l:"再難也不去",e:{mood:-6,stress:10},g:"你把那筆債留著，慢慢還。"}]},
+
+  {id:"trapPay",w:30,when:()=>heavy()&&S.debtKind==="錢莊"&&S.money<-280&&!S.trapped&&!S.flags.wasTrapped,
+   t:"他們說有別的還法",d:"對方把你的證件收走，說送你去一個地方，做滿就清。",
+   c:[{l:"上那台車",e:{stress:20},g:"",run:()=>{
+        S.trapSite=pick(["園區","工廠宿舍"]); S.trapped=1; S.job=null;
+        S.money=Math.max(S.money,-150); badge("被賣過");
+        logit("車開了十一個小時，中間換過兩次車牌。","bad",true)}},
+      {l:"求他們給時間",e:{mood:-12,stress:18,health:-8},g:"",run:()=>{
+        if(roll(0.45))logit("多給了你半年，利息再往上跳一階。","bad");
+        else{S.trapSite="工廠宿舍";S.trapped=1;S.job=null;badge("被賣過");logit("他們沒有在跟你商量。","bad",true)}}},
+      {l:"報警，把一切說出來",e:{stress:22,mood:-6},g:"",run:()=>{
+        if(roll(0.5)){S.debtKind="卡債";S.money=Math.max(S.money,-120);badge("報了案");
+          logit("專案小組介入，部分債務被認定無效。但你搬了家。","good",true)}
+        else{add("health",-14);getIll("舊傷");logit("筆錄做完的第二週，你家樓下換了新的噴漆。","bad",true)}}}]},
+
+  {id:"trapFamily",w:30,when:()=>heavy()&&S.trapped>=1,
+   t:"他們打電話回你家",dyn:()=>"對方要你家人匯一筆錢來贖人。你被叫去講了三句話，然後電話就被拿走了。",
+   c:[{l:"求家人籌錢",e:{mood:-10,stress:16},g:"",run:()=>{
+        if (roll(0.45)){ money(-rnd(150,400));
+          freeFromTrap("家裡把房子抵押了。你在機場看到媽媽的時候，她比你記憶中矮了一截。","good"); }
+        else { add("mood",-16); logit("錢匯過去了，人沒有放。他們說還差一點。","bad",true); }}},
+      {l:"在電話裡叫他們不要給",e:{mood:-14,stress:22,health:-10},g:"",run:()=>{
+        logit("那通電話之後，你被換到更裡面的那一棟。","bad",true)}},
+      {l:"照著稿子念，讓家裡知道你還活著",e:{mood:4,stress:10},g:"",run:()=>{
+        S.flags.sos=(S.flags.sos||0)+1; S.kids.forEach(k=>k.bond=Math.min(100,k.bond+6));
+        logit("你在稿子裡偷塞了一個只有家人聽得懂的詞。")}}]},
+
+  {id:"trapBoss",w:22,when:()=>heavy()&&S.trapped>=2,
+   t:"他們要你去管別人",d:"做得久、沒有鬧事的，可以升上去。升上去就不用再被打。",
+   c:[{l:"接下來",e:{mood:-12,stress:14,social:6,health:5},g:"",run:()=>{
+        S.flags.becameOne=true; badge("變成了他們");
+        logit("你開始拿著名單點人。你知道自己在做什麼。","bad",true)}},
+      {l:"拒絕",e:{mood:6,health:-12,stress:16},g:"",run:()=>{
+        add("fit",-6); logit("你被調去最底層那一組，手上多了幾道疤。","bad")}},
+      {l:"假裝接下，暗中幫人",e:{mood:10,intel:5,stress:24},g:"",run:()=>{
+        S.flags.sos=(S.flags.sos||0)+2; badge("幫人開過門");
+        if(chance(0.3)){add("health",-18);logit("有人出去了，然後他們開始查是誰。","bad",true)}
+        else logit("你把兩個人的名字悄悄從名單上劃掉。","good",true)}}]},
+
+  {id:"trapRescue",w:46,when:()=>heavy()&&S.trapped>=1&&((S.flags.sos||0)>=2||S.trapped>=3),
+   t:"外面有人在找你",d:"你的名字出現在一份救援名單上。",
+   c:[{l:"跟著走",e:{stress:16},g:"",run:()=>{
+        if (roll(0.7)) freeFromTrap("你坐上了那台車，過了邊境才敢哭出來。","good");
+        else { add("health",-16); add("mood",-14); logit("消息走漏了，那天被攔下來的是另外三個人。","bad",true); }}},
+      {l:"不敢賭，再等更穩的機會",e:{mood:-8,stress:14},g:"",run:()=>{S.flags.sos=(S.flags.sos||0)+1}},
+      {l:"帶著同鄉一起走",e:{mood:12,stress:22,health:-8},g:"",run:()=>{
+        if (roll(0.5)){ badge("沒有自己先走"); freeFromTrap("你們六個人一起出來。後來每年都還會聯絡。","good"); }
+        else { add("health",-20); getIll("舊傷"); logit("人太多了，動靜太大。","bad",true); }}}]},
+
+  {id:"trapAfter",w:55,when:()=>heavy()&&S.flags.wasTrapped&&!S.trapped&&!S.seen.trapAfter,
+   t:"回來之後",d:"你瘦了十四公斤，身分證要重辦，債還在那裡。",
+   c:[{l:"去社會局申請協助",e:{mood:10,stress:-16,cash:30},g:"",run:()=>{
+        if(S.debtKind==="錢莊"){S.debtKind="卡債";logit("社工陪你去做了債務協商。","good",true)}
+        else logit("有人幫你把事情一項一項排開。","good",true)}},
+      {l:"誰都不講，先找工作",e:{mood:-8,stress:12},g:"",run:()=>{
+        const pool=JOBS.filter(j=>jobOK(j)); if(pool.length){takeJob(pick(pool));logit("你找了一份不用說太多話的工作。",null,true)}}},
+      {l:"出面指認那些人",e:{mood:14,stress:24},g:"",run:()=>{
+        S.flags.reported=true;
+        if(roll(0.45)){badge("站出來指認");add("social",8);logit("因為你的筆錄，後來有十幾個人被帶回來。","good",true)}
+        else{add("mood",-12);logit("案子拖了四年，最後只起訴了兩個小角色。","bad",true)}}}]},
+
+  {id:"trapNews",w:16,when:()=>heavy()&&S.flags.wasTrapped&&!S.trapped&&S.age>=28&&!S.seen.trapNews,
+   t:"有記者想訪問你",d:"他說讓更多人知道，就會少一個人上那台車。",
+   c:[{l:"露臉講完整個過程",e:{mood:8,social:10,stress:20},g:"",run:()=>{
+        badge("說給別人聽");
+        if(roll(0.6)){add("mood",12);logit("報導出來以後，有陌生人在路上跟你說謝謝。","good",true)}
+        else{add("mood",-14);add("social",-8);logit("留言區有人說「誰叫你貪」。","bad",true)}}},
+      {l:"匿名、變聲",e:{mood:6,stress:8},g:"你講了四個小時，鏡頭只拍你的手。"},
+      {l:"不想再講一次",e:{mood:-5,stress:-6},g:"你把那則訊息封存了。"}]},
 
   /* ---------- 道上 ---------- */
   {id:"gangin",w:26,when:()=>S.gang===0&&!S.record&&S.age>=15&&S.age<=26&&S.st.fit>=52&&(S.flags.voc||S.school==="後段高中"||S.school==="社區高中"||S.money<25),
@@ -1790,6 +1884,7 @@ function milestone(){
   if (a === 19 && S.flags.redo){ S.flags.redo = false; return exam18(); }
   if (S.path === "uni" && a === (S.uniEnd||22)) return afterUni();
   if ((S.path === "grad" || S.path === "abroad") && a === (S.gradEnd||24)) return afterGrad();
+  if (S.trapped > 0) return null;
   if (a >= 18 && stageKey() === "work" && !S.job && !S.retired) return findJob();
   return null;
 }
@@ -1906,6 +2001,13 @@ function findJob(){
   return {t:"找工作",d:mood,c:opts};
 }
 
+function freeFromTrap(text, tone){
+  S.trapped = 0; S.job = null; S.flags.wasTrapped = true; S.flags.sos = 0;
+  badge("回來了");
+  getIll("創傷壓力","回來以後，你很長一段時間不敢接陌生號碼。");
+  add("mood",18); add("stress",-20);
+  logit(text, tone || "good", true);
+}
 function divorce(){
   if (!S.partner) return;
   const n = S.partner.name;
@@ -1945,6 +2047,28 @@ function yearlyEconomy(){
     }
   }
   const k = stageKey();
+
+  // 被困住：沒有收入，而且債還會被他們一直加上去
+  if (k === "trapped"){
+    S.trapped++;
+    money(-rnd(30,80));
+    add("health",-7); add("mood",-11); add("stress",20); add("social",-3);
+    if (S.focus === "找機會逃"){
+      if (roll(0.27)) freeFromTrap("你翻出去了，走了兩天才遇到第一個會講中文的人。","good");
+      else if (chance(0.3)){ add("health",-rnd(12,25)); getIll("舊傷"); logit("被抓回來了。那幾天的事你不會想再講。","bad",true); }
+    } else if (S.focus === "偷偷求救"){
+      S.flags.sos = (S.flags.sos||0) + 1;
+      if (chance(0.2)){ add("health",-10); add("stress",10); logit("手機被搜出來，你被關了三天禁閉。","bad"); }
+    } else if (S.focus === "裝病拖延"){
+      if (roll(0.18)) freeFromTrap("他們嫌你沒有產值，把你丟在邊境的路口。","bad");
+    }
+    if (S.trapped >= 4 && roll(0.14))
+      freeFromTrap("那個地方被查了。你跟著一車人被送到大使館門口。","good");
+    else if (S.trapped >= 8 && chance(0.5))
+      freeFromTrap("他們換了地方，沒有把你帶走。你自己走到了公路上。","good");
+    if (S.trapped > 0 && chance(0.014)){ die("最後一通電話是半年前打的。後來就沒有消息了。"); return; }
+    return;
+  }
 
   // 服刑中：沒有收入，只有時間在走
   if (k === "jail"){
@@ -2122,7 +2246,8 @@ const REPEATABLE = {invest:1,scam:1,affair:1,bully:1,picky:1,ex:1,lotto:1,moveci
   affair:1,exposed:1,loverpush:1,loverend:1,loanshark:1,collect:1,bankrupt:1,nightkeep:1,sugar:1,gangup:1,gangwash:1,afterjail:1,
   raid:1,nightpregF:1,nightpregM:1,nightlove:1,nightold:1,streamviral:1,streamstalk:1,streamout:1,
   comeout:1,pride:1,outwork:1,samekid:1,bidoubt:1,realize:1,
-  harassWork:1,harassOut:1,nightharass:1,therapy:1,witness:1};
+  harassWork:1,harassOut:1,nightharass:1,therapy:1,witness:1,
+  trapFamily:1,trapRescue:1,trapBoss:1};
 
 function advanceYear(){
   if (!S || !S.alive) return;
@@ -2182,6 +2307,8 @@ function score(){
   if (S.friend) v += 30;
   if (S.job) v += S.job.pres*9;
   v += DEG[S.degree]*12 + S.age*1.2 + Object.keys(S.badges).length*10;
+  if (S.badges["回來了"]) v += 30;
+  if (S.flags.becameOne) v -= 40;
   v -= S.exes*14 + S.conds.length*8 + (S.record?45:0) + (S.flags.bankrupt?30:0) + S.gang*18 + (S.flags.leaked?25:0);
   if (S.money < 0) v += S.money/18;
   return Math.max(0, Math.round(v));
@@ -2216,6 +2343,9 @@ function epitaph(){
   if (S.badges["轉型成功"]) b.push("把過去換成了別的東西");
   if (S.badges["出櫃了"]) b.push("最後是以自己的樣子活著");
   if (S.badges["走出來了"]) b.push("花了很久，但走出來了");
+  if (S.badges["回來了"]) b.push("回得來就很好了");
+  if (S.badges["沒有自己先走"]) b.push("走的時候帶著別人");
+  if (S.flags.becameOne) b.push("有一段日子站在了另一邊");
   if (S.badges["說出來了"] || S.badges["我也是"]) b.push("曾經替自己說過話");
   if (S.flags.silent && ill("創傷壓力")) b.push("有些事到最後都沒說");
   if (S.flags.realized && S.orient !== "straight" && S.out === 0) b.push("有一句話一輩子沒說出口");
@@ -2252,7 +2382,7 @@ let heavyOn = true;
 const heavy = () => heavyOn;
 function syncHeavy(){
   $("btnHeavy").innerHTML = "沉重劇情：" + (heavyOn ? "開" : "關") +
-    '<small>性騷擾、性侵與創傷相關的情節</small>';
+    '<small>性騷擾、性侵、人口販運與創傷相關的情節</small>';
   try { localStorage.setItem("lifemachine.heavy", heavyOn ? "1" : "0"); } catch(e){}
 }
 let prevLives = [];
@@ -2319,6 +2449,7 @@ function render(){
   if (S.debtKind) fam.push('<b style="color:#F0909F">'+S.debtKind+'</b> 欠 '+fmtMoney(-S.money));
   if (S.gang > 0) fam.push('<b style="color:#F0909F">道上</b> '+["","小弟","角頭","大哥"][S.gang]);
   if (S.jail > 0) fam.push('<b style="color:#F0909F">服刑</b> 還有 '+S.jail+' 年');
+  if (S.trapped > 0) fam.push('<b style="color:#F0909F">'+S.trapSite+'</b> 第 '+S.trapped+' 年');
   $("family").innerHTML = fam.join("　") || '<span style="opacity:.4">'+S.place.name+'・'+S.home.name+'</span>';
 
   renderFocus(); renderTicker();

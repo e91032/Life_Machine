@@ -56,9 +56,21 @@ body{
   border-radius:38px 38px 46px 46px; padding:16px 16px 20px;
   box-shadow:0 18px 40px -12px var(--shadow),inset 0 2px 0 rgba(255,255,255,.5),inset 0 -6px 14px rgba(0,0,0,.18);
 }
-.brand{display:flex;align-items:center;justify-content:space-between;padding:2px 10px 12px;color:var(--shell-ink)}
-.brand .dots{display:flex;gap:6px}
-.brand .dots i{width:7px;height:7px;border-radius:50%;background:var(--shell-lo);box-shadow:inset 0 1px 1px rgba(0,0,0,.4)}
+.machine{position:relative}
+.screw{position:absolute;width:11px;height:11px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,var(--shell-hi),var(--shell-lo));
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.45)}
+.screw::after{content:"";position:absolute;inset:3px 1.5px;background:var(--shell-ink);opacity:.45;border-radius:1px}
+.screw.a{left:11px;top:11px}.screw.b{right:11px;top:11px}
+.screw.c{left:11px;bottom:12px}.screw.d{right:11px;bottom:12px}
+.brand{display:flex;align-items:center;justify-content:space-between;padding:2px 22px 12px;color:var(--shell-ink)}
+.brand .dots{display:flex;gap:6px;align-items:center}
+.brand .dots i{width:8px;height:8px;border-radius:50%;background:var(--shell-lo);box-shadow:inset 0 1px 1px rgba(0,0,0,.4)}
+.brand .dots i.led{background:#E8405F;box-shadow:0 0 7px rgba(232,64,95,.85),inset 0 1px 1px rgba(0,0,0,.3)}
+.brand .dots i.led.on{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.grille{display:grid;grid-template-columns:repeat(5,4px);gap:3px;margin-left:auto;opacity:.5}
+.grille s{display:block;width:4px;height:4px;border-radius:50%;background:var(--shell-ink);text-decoration:none}
 .brand h1{margin:0;font-size:15px;font-weight:900;letter-spacing:.14em}
 .brand small{font-family:VT323,monospace;font-size:17px;opacity:.65}
 
@@ -102,6 +114,16 @@ body{
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
 @keyframes jump{0%{transform:translateY(0)}35%{transform:translateY(-16px)}60%{transform:translateY(0) scaleY(.9)}100%{transform:translateY(0)}}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+.banner{position:absolute;left:0;right:0;top:40%;z-index:3;text-align:center;pointer-events:none;
+  font-size:15px;font-weight:900;letter-spacing:.3em;color:#fff;opacity:0;
+  text-shadow:0 0 12px rgba(0,0,0,.8),0 2px 0 rgba(0,0,0,.5)}
+.banner.go{animation:sweep 1.5s ease-out}
+@keyframes sweep{
+  0%{opacity:0;transform:translateX(-40px) scale(.8)}
+  18%{opacity:1;transform:none}
+  75%{opacity:1;transform:none}
+  100%{opacity:0;transform:translateX(40px) scale(1.1)}}
+@media (prefers-reduced-motion:reduce){.banner.go{animation:none}}
 .fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .fx span{position:absolute;font-family:VT323,monospace;font-size:19px;animation:rise 1.25s ease-out forwards;opacity:0;text-shadow:0 1px 2px rgba(0,0,0,.6)}
 @keyframes rise{0%{opacity:0;transform:translateY(6px) scale(.6)}18%{opacity:1}100%{opacity:0;transform:translateY(-44px) scale(1.15)}}
@@ -112,10 +134,16 @@ body{
 }
 
 .bars{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;min-width:0;align-self:center}
-.bar{font-size:10px;font-weight:700;letter-spacing:.04em}
-.bar span{display:flex;justify-content:space-between;opacity:.85;margin-bottom:1px}
+.bar{font-size:9.5px;font-weight:700;letter-spacing:.02em}
+.bar span{display:flex;justify-content:space-between;align-items:center;opacity:.9;margin-bottom:2px;gap:3px}
+.bar span u{text-decoration:none;display:inline-flex;width:9px}
+.bar span u svg{width:9px;height:9px;display:block}
+.bar span i{flex:1}
 .bar span em{font-style:normal;font-family:VT323,monospace;font-size:13px}
-.bar i{display:block;height:5px;background:rgba(0,0,0,.32);border-radius:1px;overflow:hidden}
+.bar i{display:block;height:7px;background:rgba(0,0,0,.45);position:relative;overflow:hidden;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.bar i::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(90deg,transparent 0 5px,rgba(0,0,0,.75) 5px 7px)}
 .bar i b{display:block;height:100%;background:var(--lcd-glow);transition:width .5s ease,background .4s}
 .bar.warn i b{background:var(--accent)!important}
 
@@ -138,15 +166,22 @@ body{
 @keyframes pop{from{transform:scale(.96) translateY(6px);opacity:0}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){.overlay{animation:none}}
 .overlay h2{margin:0 0 7px;font-size:17px;font-weight:900;letter-spacing:.03em}
+.overlay.on .kicker,.overlay.on h2,.overlay.on p.body{animation:slidein .26s ease-out both}
+.overlay.on h2{animation-delay:.04s}.overlay.on p.body{animation-delay:.08s}
+@keyframes slidein{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.overlay.on .kicker,.overlay.on h2,.overlay.on p.body{animation:none}}
 .overlay .kicker{font-family:VT323,monospace;font-size:15px;opacity:.6;letter-spacing:.1em}
 .overlay p.body{margin:0 0 13px;font-size:12.5px;line-height:1.7;opacity:.9}
 .choices{display:flex;flex-direction:column;gap:6px}
 .choices button{
   text-align:left;font:inherit;font-size:12.5px;font-weight:500;cursor:pointer;
   background:rgba(255,255,255,.07);color:var(--lcd-glow);
-  border:1px solid rgba(233,227,212,.3);border-radius:8px;padding:8px 11px;
+  border:1px solid rgba(233,227,212,.3);border-radius:8px;padding:8px 11px 8px 22px;
+  position:relative;
   transition:background .14s,transform .12s;
 }
+.choices button::before{content:"▶";position:absolute;left:8px;top:8px;font-size:9px;opacity:0;transition:opacity .12s,transform .12s;transform:translateX(-3px)}
+.choices button:hover::before,.choices button:focus-visible::before{opacity:.9;transform:none}
 .choices button:hover{background:rgba(255,255,255,.17)}
 .choices button:active{transform:translateY(1px)}
 .choices button small{display:block;opacity:.6;font-size:10.5px;margin-top:2px;font-weight:400}
@@ -221,10 +256,12 @@ body{
 <div class="wrap">
 
   <div class="machine">
+    <i class="screw a"></i><i class="screw b"></i><i class="screw c"></i><i class="screw d"></i>
     <div class="brand">
-      <div class="dots"><i></i><i></i></div>
+      <div class="dots"><i class="led" id="led"></i><i></i></div>
       <h1>人生機</h1>
       <small>LIFE-84</small>
+      <div class="grille"><s></s><s></s><s></s><s></s><s></s><s></s><s></s><s></s><s></s><s></s></div>
     </div>
 
     <div class="screen" id="screen">
@@ -239,6 +276,7 @@ body{
           <svg class="bg" id="bg" viewBox="0 0 80 48" shape-rendering="crispEdges" aria-hidden="true"></svg>
           <div class="sprite" id="sprite"></div>
           <div class="fx" id="fx"></div>
+          <div class="banner" id="banner"></div>
         </div>
         <div class="bars" id="bars"></div>
       </div>
@@ -275,6 +313,7 @@ body{
         <button class="ctrl" id="sp2" aria-pressed="false" title="兩倍速">▶▶</button>
         <button class="ctrl" id="sp4" aria-pressed="false" title="四倍速">▶▶▶</button>
         <button class="ctrl wide" id="stepBtn" title="手動過一年">過一年</button>
+        <button class="ctrl" id="sndBtn" title="音效">♪</button>
         <span class="speed-label" id="speedLabel">一年約 2.6 秒</span>
       </div>
       <p class="focus-title">這幾年的重心</p>
@@ -404,7 +443,7 @@ function spriteKey(){
 }
 function spriteSVG(key, blink, step){
   const g = SPR[key] || SPR.adultM, P = palette();
-  const occ = {}, cells = [];
+  const occ = {}, cells = [], mouth = [], eyes = [];
   for (let y=0;y<g.length;y++) for (let x=0;x<g[y].length;x++){
     const c = g[y][x];
     if (c === ".") continue;
@@ -413,6 +452,24 @@ function spriteSVG(key, blink, step){
     if (step && (c === "L" || (c === "F" && x < 8))) yy = y - 1;
     if (!fill) continue;
     occ[x+","+yy] = 1; cells.push([x,yy,fill]);
+    if (c === "M") mouth.push([x,yy]);
+    if (c === "E") eyes.push([x,yy]);
+  }
+  // 嘴角跟著心情上揚或下垂，壓力大會多一對皺眉
+  if (mouth.length && S && S.st){
+    const xs = mouth.map(m=>m[0]), my = mouth[0][1];
+    const lo = Math.min.apply(null,xs), hi = Math.max.apply(null,xs);
+    if (S.st.mood >= 72){
+      [[lo-1,my-1],[hi+1,my-1]].forEach(q=>{ occ[q[0]+","+q[1]]=1; cells.push([q[0],q[1],P.M]); });
+    } else if (S.st.mood <= 32){
+      [[lo-1,my+1],[hi+1,my+1]].forEach(q=>{ occ[q[0]+","+q[1]]=1; cells.push([q[0],q[1],P.M]); });
+    }
+  }
+  if (eyes.length && S && S.st && S.st.stress >= 76 && !blink){
+    const ys = eyes.map(e=>e[1]), ey = Math.min.apply(null,ys);
+    const xs2 = eyes.map(e=>e[0]);
+    const lo2 = Math.min.apply(null,xs2), hi2 = Math.max.apply(null,xs2);
+    [[lo2,ey-1],[hi2,ey-1]].forEach(q=>{ occ[q[0]+","+q[1]]=1; cells.push([q[0],q[1],P.H]); });
   }
   // 沿著外緣補一圈深色，像素畫靠這個才看得出輪廓
   const ring = {};
@@ -498,8 +555,8 @@ function react(tone){
   const sp = $("sprite");
   sp.classList.remove("jump","shake");
   void sp.offsetWidth;
-  if (tone === "good"){ sp.classList.add("jump"); fx(["♥","✦","＊"], 4, "#F2D06B"); }
-  else if (tone === "bad"){ sp.classList.add("shake"); fx(["✖","·"], 3, "#E8605D"); }
+  if (tone === "good"){ sp.classList.add("jump"); fx(["♥","✦","＊"], 4, "#F2D06B"); beep([660,880,1180],0.09,"square",0.045); }
+  else if (tone === "bad"){ sp.classList.add("shake"); fx(["✖","·"], 3, "#E8605D"); beep([300,180],0.14,"sawtooth",0.04); }
 }
 
 /* ===================== 名字與出身 ===================== */
@@ -565,6 +622,24 @@ function wpick(list){
 }
 
 /* ===================== 狀態 ===================== */
+// 7x7 像素小圖示
+const ICON = {
+  health:["..##.##",".#######",".#######","..#####","...###","....#","......."],
+  intel: [".#####.","#.#.#.#","#######","#.#.#.#",".#####.","..###..","...#..."],
+  fit:   ["##...##","##...##","#######","##...##","##...##",".......","......."],
+  charm: ["...#...",".#####.","#######",".#####.","..###..","...#...","......."],
+  mood:  [".#####.","#.#.#.#","#######","#.....#","#.###.#",".#####.","......."],
+  social:["##...##","##...##",".#####.","#######","#.###.#","#.....#","......."],
+  luck:  ["..###..",".##.##.","###.###",".##.##.","..###..","...#...","...#..."],
+  stress:["....##.","...##..","..####.",".##....","####...","..##...",".##...."]
+};
+function iconSVG(k, col){
+  const g = ICON[k]; if (!g) return "";
+  let r = "";
+  for (let y=0;y<g.length;y++) for (let x=0;x<g[y].length;x++)
+    if (g[y][x] === "#") r += '<rect x="'+x+'" y="'+y+'" width="1" height="1"/>';
+  return '<svg viewBox="0 0 7 7" shape-rendering="crispEdges" fill="'+col+'" aria-hidden="true">'+r+'</svg>';
+}
 const STAT_DEF = [
   {k:"health",n:"健康",c:"#6FD08C"},{k:"intel",n:"智力",c:"#7FB0F0"},
   {k:"fit",n:"體能",c:"#F2A65A"},{k:"charm",n:"魅力",c:"#F08CAE"},
@@ -614,7 +689,13 @@ function add(k,v){
   S.st[k] = clamp(S.st[k] + v);
 }
 function money(v){ S.money += v; }
-function badge(t){ S.badges[t] = true; }
+function badge(t){
+  if (!S.badges[t]){
+    S.badges[t] = true;
+    fx(["★","✦","♥","＊"], 6, pick(["#F2D06B","#6FD08C","#F08CAE","#7FB0F0"]));
+    beep([700,900,1150,1400],0.07,"square",0.04);
+  }
+}
 function has(t){ return S.traits.indexOf(t) >= 0; }
 function ill(c){ return S.conds.indexOf(c) >= 0; }
 function getIll(c, text){
@@ -2735,6 +2816,7 @@ function advanceYear(){
 function die(reason){
   S.alive = false; S.deathReason = reason;
   speed = 0; syncSpeedBtns();
+  beep([520,420,320,220],0.22,"triangle",0.05);
   logit("享年 "+S.age+" 歲。"+reason, "bad", true);
   showEnd();
 }
@@ -2858,26 +2940,67 @@ let lastSprite = "", lastScene = "", lastFit = "", blink = false, step = false;
 function paintSprite(){
   $("sprite").innerHTML = spriteSVG(lastSprite || "baby", blink, step);
 }
+function banner(text){
+  const el = $("banner"); el.textContent = text;
+  el.classList.remove("go"); void el.offsetWidth; el.classList.add("go");
+  beep([520,700],0.1,"square");
+}
+/* ---- 迷你音效（第一次點擊才建立） ---- */
+let actx = null, sndOn = true;
+function syncSnd(){
+  $("sndBtn").textContent = sndOn ? "♪" : "✕";
+  $("sndBtn").setAttribute("aria-pressed", sndOn);
+  try { localStorage.setItem("lifemachine.snd", sndOn ? "1" : "0"); } catch(e){}
+}
+function beep(freqs, dur, type, vol){
+  if (!sndOn || speed > 2) return;
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+    const list = [].concat(freqs);
+    list.forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || "square"; o.frequency.value = f;
+      const t0 = actx.currentTime + i * (dur || 0.08) * 0.8;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol || 0.05, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + (dur || 0.08));
+      o.connect(g); g.connect(actx.destination);
+      o.start(t0); o.stop(t0 + (dur || 0.08) + 0.02);
+    });
+  } catch(e){}
+}
 function flashTick(){
   const sc = $("screen"), el = $("age");
   sc.classList.add("tick"); setTimeout(()=>sc.classList.remove("tick"), 120);
+  beep(880, 0.035, "square", 0.022);
   el.classList.add("pop"); setTimeout(()=>el.classList.remove("pop"), 190);
 }
 function render(){
   if (!S) return;
   $("age").textContent = S.age;
   $("stageName").textContent = STAGE_INFO[stageKey()].n + (S.job ? "／"+S.job.t : "");
-  $("cash").textContent = (S.money < 0 ? "-" : "") + "$" + fmtMoney(Math.abs(S.money));
+  const cashNow = (S.money < 0 ? "-" : "") + "$" + fmtMoney(Math.abs(S.money));
+  if (cashNow !== $("cash").textContent){
+    $("cash").textContent = cashNow;
+    $("cash").animate ? $("cash").animate(
+      [{transform:"scale(1.18)"},{transform:"scale(1)"}], {duration:220, easing:"ease-out"}) : 0;
+  }
 
-  const sp = spriteKey(), of = outfitKey() + "|" + (S.age>=68?2:S.age>=50?1:0);
+  const face = (S.st.mood>=72?2:S.st.mood<=32?0:1) + "/" + (S.st.stress>=76?1:0);
+  const sp = spriteKey(), of = outfitKey() + "|" + (S.age>=68?2:S.age>=50?1:0) + "|" + face;
   if (sp !== lastSprite || of !== lastFit){ lastSprite = sp; lastFit = of; paintSprite(); }
   const sk = stageKey();
-  if (sk !== lastScene){ lastScene = sk; drawScene(sk); }
+  if (sk !== lastScene){
+    if (lastScene) banner(STAGE_INFO[sk].n);
+    lastScene = sk; drawScene(sk);
+  }
 
   $("bars").innerHTML = STAT_DEF.map(d => {
     const v = Math.round(S.st[d.k]);
     const warn = d.bad ? v > 72 : v < 25;
-    return '<div class="bar'+(warn?' warn':'')+'"><span>'+d.n+'<em>'+v+'</em></span><i><b style="width:'+v+'%;background:'+d.c+'"></b></i></div>';
+    return '<div class="bar'+(warn?' warn':'')+'"><span><u>'+iconSVG(d.k,warn?"#E8605D":d.c)+'</u>'+d.n+
+           '<em>'+v+'</em></span><i><b style="width:'+v+'%;background:'+d.c+'"></b></i></div>';
   }).join("");
 
   $("chips").innerHTML =
@@ -2923,7 +3046,7 @@ function renderFocus(){
   $("focusGrid").innerHTML = set.map(f =>
     '<button class="focus-btn" data-f="'+f+'" aria-pressed="'+(S.focus===f)+'">'+f+'</button>').join("");
   Array.prototype.forEach.call($("focusGrid").children, b => {
-    b.onclick = () => { S.focus = b.dataset.f; renderFocus(); };
+    b.onclick = () => { S.focus = b.dataset.f; renderFocus(); beep(560,0.035,'square',0.028); };
   });
 }
 
@@ -2939,6 +3062,7 @@ function openEvent(){
     const label = typeof ch.l === "function" ? ch.l() : ch.l;
     b.innerHTML = label + (ch.g ? '<small>'+ch.g+'</small>' : '');
     b.onclick = () => {
+      beep([740,540],0.05,"square",0.035);
       $("event").classList.remove("on");
       pending = null;
       applyEff(ch.e);
@@ -2985,11 +3109,13 @@ function frame(t){
 function syncSpeedBtns(){
   [[0,"sp0"],[1,"sp1"],[2,"sp2"],[4,"sp4"]].forEach(p => $(p[1]).setAttribute("aria-pressed", speed === p[0]));
   $("speedLabel").textContent = speed === 0 ? "已暫停" : "一年約 " + (YEAR_MS/1000/speed).toFixed(1) + " 秒";
+  $("led").classList.toggle("on", speed > 0 && running && !!S && S.alive);
 }
 [[0,"sp0"],[1,"sp1"],[2,"sp2"],[4,"sp4"]].forEach(p => {
-  $(p[1]).onclick = () => { speed = p[0]; acc = 0; syncSpeedBtns(); };
+  $(p[1]).onclick = () => { speed = p[0]; acc = 0; syncSpeedBtns(); beep(p[0]?740:400,0.04,"square",0.03); };
 });
-$("stepBtn").onclick = () => { if (S && S.alive && !modalOpen()){ acc = 0; advanceYear(); } };
+$("stepBtn").onclick = () => { beep(620,0.04,"square",0.03); if (S && S.alive && !modalOpen()){ acc = 0; advanceYear(); } };
+$("sndBtn").onclick = () => { sndOn = !sndOn; syncSnd(); if (sndOn) beep([660,880],0.06,"square",0.04); };
 
 /* ===================== 投胎 ===================== */
 function rollBirth(){
@@ -3006,8 +3132,9 @@ function rollBirth(){
     "<b>" + draft.home.name + "</b>（" + (sex==="M"?"男":"女") + "）<br>" +
     "天生：<b>" + t1.n + "</b>（" + t1.d + "）、<b>" + t2.n + "</b>（" + t2.d + "）";
   $("rerollLeft").textContent = rerolls > 0 ? "還可以換 " + rerolls + " 次" : "沒得換了，認命吧";
-  const save = S; S = {sex:draft.sex, age:8, skin:draft.skin, hair:draft.hair,
-                       retired:false, jail:0, gang:0, job:null, path:null, flags:{}};
+  const save = S; S = {sex:draft.sex, age:8, skin:draft.skin, hair:draft.hair, style:"基本",
+                       st:{mood:66,stress:20}, retired:false, jail:0, gang:0, trapped:0,
+                       job:null, path:null, flags:{}};
   drawScene("primary"); $("sprite").innerHTML = spriteSVG(draft.sex==="F"?"childF":"childM", false, false);
   S = save;
 }
@@ -3033,6 +3160,8 @@ function resetAll(){
   $("startScreen").classList.add("on");
 }
 
+try { const v = localStorage.getItem("lifemachine.snd"); if (v !== null) sndOn = v === "1"; } catch(e){}
+syncSnd();
 loadHeavy(); syncHeavy(); loadLives(); syncSpeedBtns(); rollBirth();
 $("btnHeavy").onclick = () => { heavyOn = !heavyOn; syncHeavy(); };
 requestAnimationFrame(frame);

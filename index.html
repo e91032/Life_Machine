@@ -261,6 +261,7 @@ body{
         <div class="choices">
           <button id="btnStart">開始這一生</button>
           <button id="btnReroll">重新投胎 <small id="rerollLeft">還可以換 3 次</small></button>
+          <button id="btnHeavy">沉重劇情：開 <small>性騷擾、性侵與創傷相關的情節</small></button>
         </div>
       </div>
 
@@ -584,6 +585,9 @@ function newState(d){
     econ:0, econUntil:0,
     partner:null, kids:[], exes:0, friend:null,
     lover:null, debtKind:null, gang:0, jail:0, record:false, stigma:0,
+    orient:d.orient, out:0,
+    hMax: d.sex === "F" ? (chance(.42)?0:chance(.62)?1:2) : (chance(.76)?0:1),
+    aRisk: chance(d.sex === "F" ? 0.16 : 0.045),
     log:[], badges:{}, flags:{}, seen:{}, debtYears:0
   };
 }
@@ -736,6 +740,7 @@ function jobOK(j){
   if (n.major && S.major !== n.major) return false;
   if (n.tier && (TIER[S.uniTier] === undefined || TIER[S.uniTier] < n.tier)) return false;
   if (S.record && j.pres >= 3) return false;          // 有前科，正經單位不收
+  if (S.flags.leaked && j.pres >= 4) return false;     // 影片還在網路上，高階職位會查
   if (j.hidden) return false;                          // 八大與道上不會出現在求職清單
   return true;
 }
@@ -876,9 +881,20 @@ const AUTO = [
 ];
 
 /* ===================== 選擇事件（會中斷） ===================== */
-function partnerNew(aff){
-  return {name:makeName(S.sex==="M"?"F":"M"),aff:aff,married:false,since:S.age,cheated:false};
+const other = () => S.sex === "M" ? "F" : "M";
+function likedSex(){
+  if (!S.flags.realized || S.orient === "straight") return other();
+  if (S.orient === "gay") return S.sex;
+  return chance(0.5) ? S.sex : other();
 }
+function partnerNew(aff, forced){
+  const ps = forced || likedSex();
+  return {name:makeName(ps),sex:ps,aff:aff,married:false,since:S.age,cheated:false};
+}
+const sameSex = () => !!(S.partner && S.partner.sex === S.sex);
+// 一生會遇到幾次是出生時就抽好的，用完就不會再觸發
+const hLeft = extra => (S.flags.hCount||0) < (S.hMax + (extra||0));
+const hMark = () => { S.flags.hCount = (S.flags.hCount||0) + 1; S.flags.harassed = true; };
 const CHOICE = [
   {id:"bully",w:7,when:()=>S.age>=4&&S.age<=11,
    t:"被同學欺負了",d:"有人搶走你的點心，還笑你的鞋子很舊。",
@@ -1008,7 +1024,7 @@ const CHOICE = [
         else { S.partner.aff-=20; logit("話說開了，但有什麼東西裂了。","bad"); }
       }}]},
 
-  {id:"kid",w:62,when:()=>married()&&S.age>=25&&S.age<=44&&S.kids.length<4,
+  {id:"kid",w:62,when:()=>married()&&!sameSex()&&S.age>=25&&S.age<=44&&S.kids.length<4,
    t:"要生小孩嗎",d:"醫生說身體沒問題，問題只有「要不要」。",
    c:[{l:"生",e:{mood:14,cash:-30,health:-4,stress:12},g:"",run:()=>{
         const k={name:makeName(chance(.5)?"M":"F"),born:S.age,bond:70};
@@ -1041,7 +1057,7 @@ const CHOICE = [
    t:"有人對你很好",d:"同事最近常找你吃飯，說的話剛好都是你在家聽不到的。",
    c:[{l:"越線",e:{mood:12,charm:4,stress:16},g:"",run:()=>{
         S.partner.cheated=true; badge("出軌過");
-        S.lover={name:makeName(S.sex==="M"?"F":"M"),years:0,risk:14};
+        S.lover={name:makeName(likedSex()),years:0,risk:14};
         logit("你跟"+S.lover.name+"開始了另一段。手機從此都是靜音朝下。","bad",true);
       }},
       {l:"保持距離",e:{mood:-5,intel:3},g:"你換了午餐時間。"},
@@ -1138,13 +1154,13 @@ const CHOICE = [
       {l:"已讀不回",e:{mood:-3,intel:3},g:"你放下手機，又拿起來看了三次。"},
       {l:"封鎖",e:{mood:4,stress:-6},g:"乾淨俐落。"}]},
 
-  {id:"accident",w:7,when:()=>S.partner&&!married()&&S.age>=19&&S.age<=36&&S.kids.length<3,
+  {id:"accident",w:7,when:()=>S.partner&&!married()&&!sameSex()&&S.age>=19&&S.age<=36&&S.kids.length<3,
    t:"驗孕棒是兩條線",d:"你們都還沒準備好。",
    c:[{l:"結婚，把小孩生下來",e:{mood:6,cash:-50,stress:18},g:"",run:()=>{S.partner.married=true;S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:70});badge("奉子成婚");logit("婚禮辦得很趕，但你們笑得很開心。","good",true)}},
       {l:"生，但先不結婚",e:{mood:2,cash:-35,stress:14,social:-6},g:"",run:()=>{S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:70});logit("你們一起帶小孩，只是沒有那張紙。",null,true)}},
       {l:"討論後決定不要",e:{mood:-15,health:-6,stress:16},g:"",run:()=>{S.partner.aff-=12;logit("那之後你們有一陣子不太說話。","bad")}}]},
 
-  {id:"infert",w:7,when:()=>married()&&S.kids.length===0&&S.age>=31&&S.age<=44&&!S.flags.nokid,
+  {id:"infert",w:7,when:()=>married()&&!sameSex()&&S.kids.length===0&&S.age>=31&&S.age<=44&&!S.flags.nokid,
    t:"試了三年都沒消息",d:"醫生說可以做人工，但不保證。",
    c:[{l:"做試管，砸錢砸時間",e:{health:-8,mood:-8,cash:-180,stress:22},g:"",run:()=>{
         if (roll(0.45)){S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:75});add("mood",26);badge("求來的孩子");logit("第四次，成功了。","good",true)}
@@ -1251,7 +1267,7 @@ const CHOICE = [
   {id:"loverpush",w:14,when:()=>S.lover&&S.lover.years>=2&&married(),
    t:"她要你做選擇",dyn:()=>S.lover.name+"說她不想再過節日一個人。「你到底要不要離？」",
    c:[{l:"離婚，跟她走",e:{mood:6,stress:20},g:"",run:()=>{
-        divorce(); S.partner={name:S.lover.name,aff:72,married:false,since:S.age,cheated:false};
+        divorce(); S.partner={name:S.lover.name,sex:likedSex(),aff:72,married:false,since:S.age,cheated:false};
         S.lover=null; badge("為了另一個人離婚");
         logit("你搬進了新的房子，牆上還沒有照片。",null,true); }},
       {l:"結束這段關係",e:{mood:-12,stress:-18},g:"",run:()=>{
@@ -1326,7 +1342,7 @@ const CHOICE = [
       {l:"拒絕，去找別的",e:{mood:-5,stress:8},g:"你寧願慢慢賺。"},
       {l:"只去做日班的櫃檯",e:{charm:4,cash:12,social:3},g:"錢少一點，但天亮就下班。"}]},
 
-  {id:"nightkeep",w:16,when:()=>inNight()&&S.job.years>=3,
+  {id:"nightkeep",w:16,when:()=>inNight()&&!S.flags.stream&&S.job.years>=3,
    t:"你開始想這樣要做到什麼時候",d:"鏡子裡的妝愈化愈厚，肝指數也是。",
    c:[{l:"存夠錢，轉行開店",e:{mood:14,stress:-20,charm:-3},g:"",run:()=>{
         if (S.money>=200){ money(-180); S.job={t:"小店老闆",pay:Math.round(rnd(60,140)),pres:2,cat:"biz",gr:0.8,vol:0.3,years:0};
@@ -1335,13 +1351,13 @@ const CHOICE = [
       {l:"再做幾年，錢最實在",e:{mood:-6,health:-8,stress:12},g:"",run:()=>{S.job.pay=Math.round(S.job.pay*1.1);getIll("肝指數過高","長期應酬，肝指數紅了一整頁。")}},
       {l:"直接不做了",e:{mood:8,stress:-24},g:"",run:()=>{S.job=null;logit("你把那些衣服全部丟掉。",null,true)}}]},
 
-  {id:"nightfam",w:12,when:()=>inNight()&&!S.flags.nightknown,
+  {id:"nightfam",w:12,when:()=>inNight()&&!S.flags.nightknown&&S.age<=55,
    t:"家裡知道了",d:"媽媽在電話裡沉默了很久，只問了一句「是不是真的」。",
    c:[{l:"承認",e:{mood:-16,social:-8,stress:14},g:"",run:()=>{S.flags.nightknown=true;logit("她哭了。但過年你還是回去了。","bad",true)}},
       {l:"否認到底",e:{mood:-10,stress:18},g:"",run:()=>{S.flags.nightknown=true;logit("你撒了一個得一直圓下去的謊。","bad")}},
       {l:"當場辭掉",e:{mood:6,stress:-16},g:"",run:()=>{S.flags.nightknown=true;S.job=null;logit("你為了她離開那個地方。",null,true)}}]},
 
-  {id:"sugar",w:10,when:()=>inNight()&&S.age<=40,
+  {id:"sugar",w:10,when:()=>inNight()&&!S.flags.stream&&S.age<=40,
    t:"有個客人要包養你",d:"他說一個月給你一筆固定的，條件是不要再上班。",
    c:[{l:"答應",e:{mood:4,stress:-10,social:-10},g:"",run:()=>{
         S.job={t:"被包養",pay:Math.round(rnd(180,320)),pres:1,cat:"night",gr:0,vol:0.2,years:0,hidden:true};
@@ -1349,6 +1365,325 @@ const CHOICE = [
         logit("你搬進了一間很大的房子，但鑰匙不是你的。","bad",true)}},
       {l:"拒絕，我靠自己",e:{mood:7,charm:4,stress:6},g:"你把名片退回去。"},
       {l:"拿錢但不答應條件",e:{cash:60,mood:-6,stress:12},g:"",run:()=>{if(chance(0.4)){add("health",-10);logit("他後來鬧了一場，你換了店。","bad")}}}]},
+/* ---------- 八大：往下長的那些事 ---------- */
+  {id:"nightdebt",w:40,when:()=>inNight()&&!S.flags.stream&&S.job.years<=3&&!S.seen.nightdebt,
+   t:"店裡跟你算一筆帳",d:"治裝費、梳化費、曠班罰款，算一算你第一個月是欠店裡的。",
+   c:[{l:"認了，做滿合約",e:{mood:-10,stress:16},g:"",run:()=>{money(-60);S.job.pay=Math.round(S.job.pay*1.1);logit("你簽了兩年，簽的時候手在抖。","bad",true)}},
+      {l:"找人算清楚",e:{charm:5,social:4,stress:12},g:"",run:()=>{if(roll(0.45)){money(20);logit("你把不合理的項目一條一條挑出來，少賠了一些。","good")}else{money(-80);add("mood",-8);logit("對方只說「大家都是這樣」。","bad")}}},
+      {l:"直接不做了",e:{mood:4,stress:-10},g:"",run:()=>{money(-100);S.job=null;logit("你賠了違約金走人，等於白做三個月。","bad",true)}}]},
+
+  {id:"raid",w:18,when:()=>inNight()&&!S.flags.stream&&S.age>=19,
+   t:"臨檢",d:"門口突然站了一排人，店裡的音樂停了。",
+   c:[{l:"配合做筆錄",e:{mood:-10,stress:18},g:"",run:()=>{
+        money(-rnd(10,40));
+        if(roll(0.3)){S.flags.nightknown=true;S.stigma+=2;add("social",-10);logit("你的名字出現在地方新聞的畫面角落，家裡親戚傳了一整晚。","bad",true)}
+        else logit("做完筆錄天都亮了，罰鍰自己吞。","bad")}},
+      {l:"從後門走",e:{fit:3,stress:20},g:"",run:()=>{
+        if(roll(0.55))logit("你翻過一道牆，鞋子掉了一隻，但沒被登記到。");
+        else{money(-rnd(30,70));add("mood",-12);logit("在巷口被攔下來，罰得更重。","bad")}}},
+      {l:"打電話找人處理",e:{social:5,stress:10,cash:-50},g:"",run:()=>{
+        if(roll(0.5)){logit("二十分鐘後事情就過去了。你開始明白這行怎麼運作。");S.flags.connected=true}
+        else{money(-40);logit("那支電話沒人接。","bad")}}}]},
+
+  {id:"nightpregF",w:16,when:()=>inNight()&&S.sex==="F"&&S.orient!=="gay"&&S.age>=20&&S.age<=41&&S.kids.length<4,
+   t:"你發現自己懷孕了",d:"你在廁所裡坐了很久，班表還貼在手機上。",
+   c:[{l:"生下來，離開這行",e:{mood:12,stress:14,cash:-60},g:"",run:()=>{
+        S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:80});
+        S.job=null; badge("為了小孩離開"); logit("你最後一天上班沒跟任何人說。","good",true)}},
+      {l:"生下來，請家人幫忙帶",e:{mood:2,stress:22,health:-6},g:"",run:()=>{
+        S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:45});
+        S.flags.nightknown=true; logit("小孩在阿嬤家長大，你一個月回去兩次。","bad",true)}},
+      {l:"沒有留",e:{mood:-18,health:-8,stress:18},g:"",run:()=>{logit("你休了三天假，第四天照常上班。","bad",true)}}]},
+
+  {id:"nightpregM",w:12,when:()=>inNight()&&S.sex==="M"&&S.age>=22&&S.age<=46&&S.kids.length<4,
+   t:"她說她懷孕了",d:"對方是店裡認識的，你們沒有講過以後。",
+   c:[{l:"負責，一起生",e:{mood:6,cash:-80,stress:20},g:"",run:()=>{
+        S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:65});
+        if(!S.partner)S.partner=partnerNew(58); logit("你們搬到一起住，房子很小。",null,true)}},
+      {l:"按月給錢，不住一起",e:{mood:-8,cash:-50,stress:14},g:"",run:()=>{
+        S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:30});
+        logit("你每個月轉一次帳，一年見兩次面。","bad",true)}},
+      {l:"說這不關你的事",e:{mood:-14,social:-12,stress:10},g:"",run:()=>{logit("消息在圈子裡傳開，沒有人想跟你同班。","bad",true)}}]},
+
+  {id:"nightlove",w:12,when:()=>inNight()&&S.age>=20&&S.age<=45,
+   t:"有個客人你是真的喜歡",d:"他每週都來，但從來不問你的本名。",
+   c:[{l:"跟他在一起",e:{mood:10,stress:10},g:"",run:()=>{
+        if(roll(0.4)){S.partner=partnerNew(70);logit("你們在一起了。他說會帶你離開這裡。","good",true)}
+        else{add("mood",-16);S.stigma+=1;logit("後來你才知道他家裡有人在等他。","bad",true)}}},
+      {l:"保持客人就好",e:{mood:-5,charm:4,intel:3},g:"你學會把兩件事分開。"},
+      {l:"辭掉工作再跟他說",e:{mood:6,stress:-8},g:"",run:()=>{S.job=null;
+        if(roll(0.5)){S.partner=partnerNew(66);logit("你用本名跟他重新認識了一次。","good",true)}
+        else{add("mood",-14);logit("你離開了那裡，他也沒有再出現。","bad",true)}}}]},
+
+  {id:"nightmama",w:28,when:()=>inNight()&&!S.flags.stream&&S.job.years>=4&&S.age>=27,
+   t:"店裡要你帶人",d:"少爺說你做最久，問要不要往上做。",
+   c:[{l:"當幹部，帶一組人",e:{social:9,charm:5,stress:16,health:-4},g:"",run:()=>{
+        S.job={t:"店內幹部",pay:Math.round(S.job.pay*1.5),pres:2,cat:"night",gr:0.4,vol:0.3,years:0,hidden:true};
+        badge("帶過一組人"); logit("你開始排班、談客人、處理別人的眼淚。",null,true)}},
+      {l:"自己出來開一間",e:{stress:24,cash:-220},g:"",run:()=>{
+        if(S.money<0){add("mood",-10);logit("你連頭款都湊不出來。","bad")}
+        else if(roll(0.45)){S.job={t:"酒店經營者",pay:Math.round(rnd(250,500)),pres:2,cat:"biz",gr:0.9,vol:0.4,years:0};
+          badge("自己當老闆"); logit("招牌是你自己選的字。","good",true)}
+        else{add("mood",-16);logit("開了十一個月就收了，錢全押在裝潢上。","bad",true)}}},
+      {l:"不想管人，繼續做自己的",e:{mood:3,stress:-6},g:"你只想把自己的班上完。"}]},
+
+  {id:"nightold",w:14,when:()=>inNight()&&S.age>=37,
+   t:"客人變少了",d:"新來的妹妹二十一歲，你的檯數掉了一半。",
+   c:[{l:"砸錢做醫美撐下去",e:{charm:12,mood:4,cash:-120,stress:12},g:"",run:()=>{S.job.pay=Math.round(S.job.pay*1.2)}},
+      {l:"轉去做日間的工作",e:{mood:8,stress:-18},g:"",run:()=>{S.job=null;logit("你把那些高跟鞋全部送人了。",null,true)}},
+      {l:"喝更多，拚更兇",e:{mood:-8,health:-14,stress:18},g:"",run:()=>{getIll("酒精依賴","你發現自己下班也要喝才睡得著。")}}]},
+
+  /* ---------- 成人直播 ---------- */
+  {id:"streamin",w:15,when:()=>!S.flags.stream&&S.age>=20&&S.age<=42&&S.st.charm>=58&&(S.money<40||S.debtKind||inNight()),
+   t:"有人找你開台",d:"抽成很高，而且不用出門。你把房間的燈換成粉紅色，手一直停在開台鍵上。",
+   c:[{l:"開成人台",e:{charm:8,mood:-4,stress:16,social:-6},g:"",run:()=>{
+        S.flags.stream=true; S.flags.night=true; S.stigma+=2;
+        S.job={t:"成人直播主",pay:Math.round(rnd(110,220)),pres:1,cat:"night",gr:0,vol:0.6,years:0,hidden:true};
+        badge("開過台"); logit("第一次開台只有四個人看，第三個月變成四千個。",null,true)}},
+      {l:"只做一般實況",e:{charm:5,social:6,mood:4,stress:8},g:"",run:()=>{
+        S.job={t:"實況主",pay:Math.round(rnd(35,90)),pres:2,cat:"free",gr:1.1,vol:0.7,years:0};
+        logit("你開始打電動給人看，錢少很多但睡得著。",null,true)}},
+      {l:"關掉頁面",e:{mood:-4,intel:3},g:"你把那封私訊刪了。"}]},
+
+  {id:"streamviral",w:16,when:()=>S.flags.stream&&S.job&&S.job.t==="成人直播主",
+   t:"你被演算法推上去了",d:"一個晚上湧進幾萬人，禮物刷到你看不清畫面。",
+   c:[{l:"趁熱加開時數",e:{mood:10,health:-10,stress:22},g:"",run:()=>{
+        money(S.job.pay*rnd(1.2,2.5)); S.job.pay=Math.round(S.job.pay*1.4);
+        logit("那個月你賺到以前一年的錢，也瘦了六公斤。","good",true)}},
+      {l:"維持原本的節奏",e:{mood:5,stress:-6},g:"",run:()=>{money(S.job.pay*0.5)}},
+      {l:"趁有名氣轉型",e:{charm:6,mood:8,stress:10},g:"",run:()=>{
+        if(roll(0.45)){S.job={t:"網紅",pay:Math.round(rnd(90,260)),pres:2,cat:"free",gr:1.2,vol:0.5,years:0};
+          badge("轉型成功"); logit("你把舊的內容全下架，開始接業配。","good",true)}
+        else{add("mood",-10);logit("粉絲跑了一大半，廠商也不敢接。","bad")}}}]},
+
+  {id:"streamleak",w:14,when:()=>S.flags.stream&&!S.flags.leaked&&S.age<=55,
+   t:"有人把你的畫面側錄下來",d:"檔案被轉到論壇，標題寫著你住的那一區。",
+   c:[{l:"找律師發函全面下架",e:{mood:-8,cash:-90,stress:20},g:"",run:()=>{
+        if(roll(0.5))logit("大部分連結撤掉了，但你知道撤不乾淨。");
+        else{S.flags.leaked=true;badge("外流過");logit("刪一個又冒出三個。","bad",true)}}},
+      {l:"當作沒發生",e:{mood:-14,stress:16},g:"",run:()=>{S.flags.leaked=true;badge("外流過");logit("你把自己的名字設成搜尋排除關鍵字。","bad",true)}},
+      {l:"公開承認，自己先講",e:{charm:6,mood:-6,social:4,stress:12},g:"",run:()=>{
+        S.flags.leaked=true;
+        if(roll(0.4)){money(S.job?S.job.pay*0.8:50);add("mood",14);logit("你拍了一支影片把話說清楚，反而更多人支持你。","good",true)}
+        else logit("留言區變成戰場，你關掉了通知。","bad",true)}}]},
+
+  {id:"streamstalk",w:12,when:()=>S.flags.stream&&S.job&&S.job.cat==="night",
+   t:"有觀眾查到你住哪",d:"門口放了一袋東西，上面寫著你的小名。",
+   c:[{l:"報警並搬家",e:{mood:-10,cash:-80,stress:20},g:"",run:()=>{S.place=wpick(PLACES);logit("你連夜搬到"+S.place.name+"，連朋友都沒說。","bad",true)}},
+      {l:"直接停台",e:{mood:4,stress:-14},g:"",run:()=>{S.job=null;logit("你把設備全部賣掉。",null,true)}},
+      {l:"裝沒事繼續開",e:{mood:-12,stress:24,cash:30},g:"",run:()=>{if(!roll(0.6)){add("health",-16);getIll("舊傷");logit("那個人後來等在樓下。","bad",true)}}}]},
+
+  {id:"streamout",w:14,when:()=>S.flags.stream&&S.job&&S.job.cat==="night"&&S.job.years>=3,
+   t:"你想收了",d:"錢存了一些，但每次開台前都要先深呼吸很久。",
+   c:[{l:"存款夠了，收掉",e:{mood:16,stress:-26},g:"",run:()=>{
+        if(S.money>=150){S.job=null;badge("上岸");logit("你把帳號註銷，螢幕黑掉的那一刻鬆了一口氣。","good",true)}
+        else{add("mood",-8);logit("算了算存款，你還不敢關。","bad")}}},
+      {l:"轉去做一般內容",e:{mood:9,charm:3,stress:-10},g:"",run:()=>{
+        S.job={t:"實況主",pay:Math.round(rnd(40,110)),pres:2,cat:"free",gr:1.1,vol:0.7,years:0};
+        logit("觀眾少了九成，但你可以用本名了。",null,true)}},
+      {l:"再撐兩年",e:{mood:-6,health:-6,stress:14},g:"",run:()=>{S.job.pay=Math.round(S.job.pay*1.1)}}]},
+/* ---------- 性傾向：發現、說出口、組成家庭 ---------- */
+  {id:"realize",w:45,when:()=>S.orient!=="straight"&&!S.flags.realized&&S.age>=13&&S.age<=28,
+   t:"你好像跟大家不一樣",
+   dyn:()=>S.partner ? "大家都在聊喜歡誰，你發現自己心跳的對象，跟他們說的不一樣。"
+                     : "大家都在聊喜歡誰。你跟著笑，但心裡那個名字說不出口。",
+   c:[{l:"承認這件事",e:{intel:5,mood:-6,stress:14},g:"",run:()=>{
+        S.flags.realized=true;
+        logit("你在心裡把這件事講清楚了，雖然還沒告訴任何人。",null,true)}},
+      {l:"告訴自己只是一時的",e:{mood:-4,stress:16},g:"",run:()=>{
+        logit("你把那些念頭壓下去，壓得很用力。","bad")}},
+      {l:"找資料，慢慢搞懂自己",e:{intel:8,mood:4,stress:6},g:"",run:()=>{
+        S.flags.realized=true;
+        logit("你讀了很多別人的故事，第一次覺得沒那麼孤單。","good",true)}}]},
+
+  {id:"comeout",w:34,when:()=>S.flags.realized&&S.orient!=="straight"&&S.out<2&&S.age>=16,
+   t:"要不要說出口",d:"這句話在你喉嚨裡放了好幾年。",
+   c:[{l:"跟爸媽說",e:{stress:22},g:"",run:()=>{
+        const warm = (S.home.kid!=="失和"?0.12:-0.06) + (S.origin.tag==="書香門第"?0.08:0) + (S.st.luck-50)/300;
+        if (roll(0.45+warm)){
+          S.out=2; add("mood",22); add("stress",-34); badge("出櫃了");
+          logit("媽媽沉默了很久，然後問你有沒有好好吃飯。","good",true);
+        } else {
+          S.out=1; add("mood",-22); add("social",-8); add("stress",8);
+          logit("那頓飯沒有人說話。接下來三年，過年你都沒回去。","bad",true);
+        }}},
+      {l:"只跟最好的朋友說",e:{mood:12,stress:-16},g:"",run:()=>{
+        S.out=Math.max(S.out,1);
+        if(S.friend)S.friend.bond=Math.min(100,S.friend.bond+12);
+        logit("他只回了一句「所以呢」，然後繼續吃他的麵。","good",true)}},
+      {l:"再等等，時機還不對",e:{mood:-6,stress:12},g:"你跟自己說，明年。"}]},
+
+  {id:"fakemarry",w:16,when:()=>S.flags.realized&&S.orient!=="straight"&&S.out<2&&!married()&&S.age>=27&&S.age<=42,
+   t:"家裡逼得很緊",d:"阿嬤住院了，拉著你的手說只想看你成家。",
+   c:[{l:"娶（嫁）一個不愛的人",e:{mood:-14,stress:18,social:6},g:"",run:()=>{
+        S.partner=partnerNew(42,other()); S.partner.married=true;
+        S.flags.fakeMarry=true; badge("形式婚姻");
+        logit("婚禮辦得很體面，你一整天都在笑。",null,true)}},
+      {l:"說實話",e:{stress:20},g:"",run:()=>{
+        if(roll(0.4)){S.out=2;add("mood",18);add("stress",-28);badge("出櫃了");logit("阿嬤說她早就知道了。","good",true)}
+        else{S.out=1;add("mood",-20);add("social",-10);logit("她把頭轉過去，說她聽不懂。","bad",true)}}},
+      {l:"搬出去，少回家",e:{mood:-8,social:-8,stress:-10},g:"",run:()=>{logit("你用工作當理由，一年回去一次。","bad")}}]},
+
+  {id:"samelaw",w:30,when:()=>sameSex()&&!married()&&!S.flags.samelaw&&S.age>=20,
+   t:"法律通過了",d:"新聞跳出來的那天，街上有人在哭，也有人在唱歌。",
+   c:[{l:"去登記",e:{mood:24,stress:-16,social:5},g:"",run:()=>{
+        S.flags.samelaw=true; S.partner.married=true; S.partner.aff=Math.min(100,S.partner.aff+14);
+        badge("登記結婚"); logit("你們在戶政事務所排隊，前面還有六對。","good",true)}},
+      {l:"先不急，日子照過",e:{mood:10,stress:-8},g:"",run:()=>{S.flags.samelaw=true}},
+      {l:"家裡還不知道，不敢去",e:{mood:-8,stress:12},g:"",run:()=>{S.flags.samelaw=true}}]},
+
+  {id:"outwork",w:14,when:()=>S.flags.realized&&S.orient!=="straight"&&S.out>=1&&atWork()&&S.age<=58,
+   t:"公司尾牙問你帶誰",d:"同事一直問，你發現自己每次都在換代名詞。",
+   c:[{l:"大方帶另一半去",e:{mood:14,stress:-18,social:4},g:"",run:()=>{
+        if(roll(0.65)){add("social",8);logit("大家比你想像中自在，隔天照常開會。","good")}
+        else{add("social",-12);add("stress",10);logit("有人開始跟你保持距離，升遷也慢了下來。","bad");if(S.job)S.job.gr*=0.7}}},
+      {l:"說自己單身",e:{mood:-9,stress:12},g:"你又一次把人講成朋友。"},
+      {l:"乾脆不去",e:{mood:-4,social:-6,stress:-4},g:"你在家叫了外送。"}]},
+
+  {id:"pride",w:12,when:()=>S.flags.realized&&S.orient!=="straight"&&S.age>=17&&S.age<=65,
+   t:"十月的那個週末",d:"街上滿滿都是人，有人舉著「我也是媽媽」的牌子。",
+   c:[{l:"走在隊伍裡",e:{mood:18,social:8,stress:-20,fit:3},g:"",run:()=>{badge("走過遊行");if(S.out===0)S.out=1}},
+      {l:"戴口罩去看",e:{mood:9,stress:-8},g:"你站在人行道上，看了三個小時。"},
+      {l:"在家看直播",e:{mood:4},g:"你把音量轉得很小。"}]},
+
+  {id:"samekid",w:26,when:()=>sameSex()&&married()&&S.kids.length<3&&S.age>=27&&S.age<=46,
+   t:"你們想要一個小孩",d:"這件事對你們來說，比別人多繞好幾圈。",
+   c:[{l:"出國做人工生殖",e:{mood:14,cash:-320,stress:24,health:-5},g:"",run:()=>{
+        if(roll(0.55)){S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:80});
+          badge("繞了一大圈的孩子"); logit("兩次之後成功了。你們在機場抱著她哭。","good",true)}
+        else{add("mood",-16);logit("試了兩次都沒成，錢也見底了。","bad",true)}}},
+      {l:"走收養的流程",e:{mood:10,cash:-70,stress:20},g:"",run:()=>{
+        if(roll(0.5)){S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age-3,bond:70});
+          badge("領養"); logit("程序走了兩年，她進門那天什麼都沒帶。","good",true)}
+        else{add("mood",-14);logit("審查沒過，理由寫得很模糊。","bad",true)}}},
+      {l:"兩個人就很完整",e:{mood:9,stress:-12},g:"",run:()=>{S.flags.nokid=true;S.partner.aff=Math.min(100,S.partner.aff+10)}}]},
+
+  {id:"bidoubt",w:12,when:()=>S.orient==="bi"&&S.flags.realized&&S.partner&&S.out>=1,
+   t:"他說他沒辦法不想",dyn:()=>S.partner.name+"說：「那你以後會不會又喜歡上別種人？」",
+   c:[{l:"好好解釋",e:{charm:4,intel:4,stress:8},g:"",run:()=>{
+        if(roll(0.6)){S.partner.aff=Math.min(100,S.partner.aff+14);add("mood",8);logit("他聽懂了，後來再也沒問過。","good")}
+        else{S.partner.aff-=16;add("mood",-10);logit("他說他相信，但眼神沒有。","bad")}}},
+      {l:"覺得被冒犯，吵一架",e:{mood:-10,stress:14},g:"",run:()=>{S.partner.aff-=20}},
+      {l:"用行動證明，少說多做",e:{mood:3,stress:6},g:"",run:()=>{S.partner.aff=Math.min(100,S.partner.aff+8)}}]},
+
+  {id:"nolaw",w:14,when:()=>sameSex()&&!married()&&S.age>=58,
+   t:"他住院了",dyn:()=>"護理站問你跟"+S.partner.name+"是什麼關係。你站在那裡，想不出一個可以講的詞。",
+   c:[{l:"去辦醫療委任",e:{mood:6,intel:5,stress:-10,cash:-20},g:"",run:()=>{
+        badge("補上了那張紙"); logit("你們花了一個下午簽文件，簽完兩個人都鬆了一口氣。","good",true)}},
+      {l:"說是家屬，硬進去",e:{mood:-8,stress:16},g:"",run:()=>{if(roll(0.5))logit("護理師看了你一眼，什麼都沒說就讓你進去了。");else{add("mood",-12);logit("你在走廊的椅子上坐了一整夜。","bad")}}},
+      {l:"打電話叫他家人來",e:{mood:-14,stress:12},g:"",run:()=>{S.partner.aff-=10;logit("他的家人來了，你被請到外面。","bad",true)}}]},
+/* ---------- 性騷擾與創傷（全部限成年，只寫後果不寫過程） ---------- */
+  {id:"harassWork",w:22,when:()=>heavy()&&hLeft()&&atWork()&&S.age>=20&&S.age<=58,
+   t:"主管的手停在你肩膀上太久了",
+   d:"這不是第一次。開會時的玩笑、下班後的訊息，你一直告訴自己是自己想太多。",
+   c:[{l:"向公司申訴",e:{stress:20,mood:-6},g:"",run:()=>{
+        hMark(); S.flags.reported=true;
+        if (roll(0.42)){ add("mood",14); add("stress",-18); badge("說出來了");
+          logit("公司真的處理了。他被調離原單位，你收到一封正式的道歉信。","good",true); }
+        else { add("mood",-16); add("social",-8); if(S.job)S.job.gr*=0.6;
+          logit("人資說「會了解一下」，然後被調整的是你的座位。","bad",true); }}},
+      {l:"當場明確拒絕，留下紀錄",e:{charm:4,intel:5,stress:14},g:"",run:()=>{
+        hMark();
+        if (roll(0.55)){ add("mood",8); logit("你把每一次都記下來、截圖存檔。他後來不敢再靠近你。","good"); }
+        else { add("mood",-12); add("stress",10); logit("他笑著說你開不起玩笑，然後繼續。","bad"); }}},
+      {l:"忍下來，假裝沒發生",e:{mood:-14,stress:22},g:"",run:()=>{
+        hMark();
+        logit("你開始走另一條路線去茶水間。","bad",true)}},
+      {l:"直接辭職走人",e:{mood:4,stress:-14},g:"",run:()=>{
+        hMark(); S.job=null;
+        logit("你交了辭呈，理由寫「生涯規劃」。","bad",true)}}]},
+
+  {id:"harassOut",w:16,when:()=>heavy()&&hLeft()&&S.age>=18&&S.age<=60,
+   t:"捷運上有人貼得太近",d:"你移動了位置，他也跟著移動。車廂裡很多人，但沒有人看你。",
+   c:[{l:"大聲說出來",e:{charm:5,social:4,stress:14},g:"",run:()=>{
+        hMark();
+        if (roll(0.6)){ add("mood",10); logit("旁邊的人立刻圍過來，他在下一站被帶走了。","good"); }
+        else { add("mood",-10); logit("他下車跑掉了，車廂安靜得讓你更難受。","bad"); }}},
+      {l:"先錄影再說",e:{intel:6,stress:12},g:"",run:()=>{
+        hMark(); add("mood",4);
+        logit("你拍下來報了案。警察說有影像就好辦。","good")}},
+      {l:"換車廂，不想惹事",e:{mood:-9,stress:12},g:"",run:()=>{
+        hMark(); logit("你站到下一站才敢深呼吸。","bad")}}]},
+
+  {id:"nightharass",w:24,when:()=>heavy()&&hLeft(2)&&inNight()&&!S.flags.stream,
+   t:"有個客人動手了",d:"他喝多了，而且覺得你收了錢就應該接受。",
+   c:[{l:"叫幹部進來處理",e:{social:4,stress:12},g:"",run:()=>{
+        hMark();
+        if (roll(0.6)) logit("他被請出去了，店裡把他列進黑名單。","good");
+        else { add("mood",-12); money(-20); logit("幹部說他是大客戶，叫你忍一下。","bad",true); }}},
+      {l:"潑他一杯酒就走",e:{mood:8,charm:4,stress:10},g:"",run:()=>{
+        hMark(); money(-40);
+        logit("你賠了那一攤的錢，但你走出去的時候是抬頭的。","good",true)}},
+      {l:"忍到下班",e:{mood:-16,stress:24,health:-5},g:"",run:()=>{
+        hMark();
+        if (chance(0.4)) getIll("酒精依賴","你開始需要喝一點才睡得著。");
+        logit("你在更衣室裡坐了很久才換衣服。","bad",true)}}]},
+
+  {id:"assault",w:30,when:()=>heavy()&&S.aRisk&&!S.flags.assaulted&&S.age>=18&&S.age<=50,
+   t:"那天晚上發生了很糟的事",
+   d:"對方是認識的人。你花了很久才敢用那兩個字去形容它。",
+   c:[{l:"去醫院驗傷、報警",e:{mood:-22,stress:26,health:-8},g:"",run:()=>{
+        S.flags.assaulted=true; S.flags.harassed=true; S.flags.reported=true;
+        getIll("創傷壓力","那之後有一段時間，你不敢一個人搭電梯。");
+        logit("你做了一整夜的筆錄。至少，有紀錄了。",null,true)}},
+      {l:"告訴一個信任的人",e:{mood:-18,stress:20},g:"",run:()=>{
+        S.flags.assaulted=true; S.flags.harassed=true;
+        getIll("創傷壓力","那之後有一段時間，你不敢一個人搭電梯。");
+        if (S.friend || S.partner){ add("mood",14); add("stress",-14);
+          logit("他什麼都沒問，只是一直陪著你。","good",true); }
+        else logit("你打了四通電話，都在響到最後一聲時掛掉。","bad",true)}},
+      {l:"一個人撐著，誰都不說",e:{mood:-26,stress:32},g:"",run:()=>{
+        S.flags.assaulted=true; S.flags.harassed=true; S.flags.silent=true;
+        getIll("創傷壓力","那之後有一段時間，你不敢一個人搭電梯。");
+        logit("你照常上班、照常吃飯，只是整個人空掉了一塊。","bad",true)}}]},
+
+  {id:"trial",w:26,when:()=>heavy()&&S.flags.reported&&S.flags.assaulted&&!S.seen.trial,
+   t:"開庭了",d:"你被問了很多次「為什麼當下不反抗」。",
+   c:[{l:"撐完整個程序",e:{mood:-14,stress:26,cash:-60},g:"",run:()=>{
+        if (roll(0.45)){ add("mood",26); add("stress",-30); badge("撐到判決");
+          logit("判決下來那天，你在法院門口哭了很久。","good",true); }
+        else { add("mood",-18); logit("證據不足，不起訴。你連生氣的力氣都沒有。","bad",true); }}},
+      {l:"和解，拿一筆錢結束",e:{mood:-8,stress:-16},g:"",run:()=>{
+        money(rnd(60,240)); logit("你簽了保密條款。這件事從此不存在於任何紀錄裡。",null,true)}},
+      {l:"撤告，不想再回想一次",e:{mood:-10,stress:-20},g:"",run:()=>{
+        logit("你只想把日子過回去。","bad")}}]},
+
+  {id:"therapy",w:28,when:()=>heavy()&&ill("創傷壓力"),
+   t:"朋友建議你去看看",d:"你一直說自己沒事，但你已經半年沒有好好睡過。",
+   c:[{l:"開始固定做心理諮商",e:{cash:-60,stress:-22,mood:10},g:"",run:()=>{
+        if (roll(0.6)){ cureIll("創傷壓力"); add("mood",16); badge("走出來了");
+          logit("第十一次晤談的時候，你第一次把整件事講完，而且沒有發抖。","good",true); }
+        else logit("你開始每兩週去一次。沒有馬上變好，但有一個地方可以講。")}},
+      {l:"吃藥控制就好",e:{health:-3,mood:8,stress:-14,cash:-25},g:"",run:()=>{
+        if (roll(0.4)) cureIll("創傷壓力")}},
+      {l:"我自己會好",e:{mood:-8,stress:10},g:"",run:()=>{
+        if (chance(0.35)) getIll("酒精依賴","你開始靠酒精讓自己關機。")}}]},
+
+  {id:"witness",w:9,when:()=>heavy()&&atWork()&&S.age>=22&&S.age<=60,
+   t:"你看到同事被欺負了",d:"大家都看到了，但大家都在低頭看手機。",
+   c:[{l:"當場打斷，把人帶走",e:{charm:6,social:7,mood:9,stress:12},g:"",run:()=>{
+        badge("有站出來");
+        if (roll(0.5)){ add("social",6); logit("後來她成了你很重要的朋友。","good",true);
+          if(!S.friend) S.friend={name:makeName(chance(.5)?"M":"F"),bond:78}; }
+        else { if(S.job)S.job.gr*=0.75; add("stress",10); logit("你被貼上「難搞」的標籤，但你不後悔。","good"); }}},
+      {l:"事後私下問她要不要幫忙",e:{social:4,mood:5,stress:6},g:"你陪她去了人資。"},
+      {l:"低頭假裝沒看到",e:{mood:-10,stress:8},g:"那個畫面你記了很多年。"}]},
+
+  {id:"metoo",w:16,when:()=>heavy()&&S.flags.harassed&&!S.flags.reported&&S.age>=34&&!S.seen.metoo,
+   t:"多年後，有人站出來了",d:"貼文底下，你看到那個很熟悉的名字。",
+   c:[{l:"留言說「我也是」",e:{mood:12,stress:16,social:5},g:"",run:()=>{
+        badge("我也是");
+        if (roll(0.55)){ add("mood",18); add("stress",-22); logit("幾十個人接在你後面。他道歉了，雖然很慢。","good",true); }
+        else { add("mood",-10); add("social",-6); logit("有人跑來問你「那你當初為什麼不講」。","bad",true); }}},
+      {l:"私訊那個人，說你相信她",e:{mood:10,social:4,stress:-8},g:"你們聊了很久。"},
+      {l:"關掉頁面",e:{mood:-12,stress:14},g:"你滑過去了，但那天整晚沒睡。"}]},
+
+  {id:"kidtalk",w:14,when:()=>heavy()&&kidAged(11,17)&&(S.flags.harassed||S.flags.assaulted),
+   t:"你想跟小孩講一些事",d:"你想到自己當年沒有人可以問。",
+   c:[{l:"好好講一次身體界線",e:{mood:12,intel:4},g:"",run:()=>{
+        S.kids.forEach(k=>k.bond=Math.min(100,k.bond+14)); badge("把話說清楚了")}},
+      {l:"只叫他小心一點",e:{mood:2},g:"你講得很模糊，自己也知道。"},
+      {l:"講不出口",e:{mood:-8,stress:10},g:"你拍拍他的頭，說沒事。"}]},
 
   /* ---------- 道上 ---------- */
   {id:"gangin",w:26,when:()=>S.gang===0&&!S.record&&S.age>=15&&S.age<=26&&S.st.fit>=52&&(S.flags.voc||S.school==="後段高中"||S.school==="社區高中"||S.money<25),
@@ -1576,6 +1911,7 @@ function divorce(){
   const n = S.partner.name;
   money(-Math.max(S.money,0)*0.45);
   add("mood",-20); add("stress",18); S.exes++; badge("離過婚");
+  if (S.flags.fakeMarry){ S.flags.fakeMarry = false; add("mood",26); add("stress",-28); logit("這段婚姻結束的時候，你反而鬆了一口氣。","good"); }
   S.kids.forEach(k => { k.bond -= 12; });
   S.partner = null;
   logit("你跟"+n+"離婚了。房子裡少了一半的東西。","bad",true);
@@ -1704,6 +2040,12 @@ function yearlyDrift(){
   if (ill("腰傷"))   { add("fit",-1.8); }
   if (ill("憂鬱症")) { add("mood",-5); add("social",-1.5); }
   if (ill("肝指數過高")) { add("health",-2.6); add("charm",-0.8); }
+  if (ill("酒精依賴")) { add("health",-3); add("mood",-3); add("intel",-1); }
+  if (ill("創傷壓力")) {
+    add("mood",-5); add("stress",6); add("social",-1.5);
+    if (S.partner) S.partner.aff -= 1.5;
+    if (chance(0.035)) { cureIll("創傷壓力"); logit("有一天你發現自己已經很久沒有夢到那件事了。","good",true); }
+  }
   if (ill("長新冠")) { add("fit",-1.5); add("health",-1); }
   if (ill("舊傷"))   { add("fit",-1.2); add("health",-0.6); }
   if (ill("近視") && a < 25) add("intel",0.3);
@@ -1721,6 +2063,9 @@ function yearlyDrift(){
       logit("你們淡掉了，最後一則訊息沒人回。","bad",true); S.partner = null; S.exes++;
     }
   }
+  // 還沒跟任何人說的那段時間，是有重量的
+  if (S.flags.realized && S.orient !== "straight" && S.out === 0){ add("stress",4); add("mood",-2); }
+  if (S.flags.fakeMarry){ add("mood",-4); add("stress",5); }
   // 外遇不會停在發生那一刻，它會一直在那裡
   if (S.lover){
     S.lover.years++;
@@ -1774,7 +2119,10 @@ function weighted(pool){
 }
 const REPEATABLE = {invest:1,scam:1,affair:1,bully:1,picky:1,ex:1,lotto:1,movecity:1,spouseJob:1,roommate:1,layoff:1,jump:1,
   confess:1,blind:1,office:1,netdate:1,kid:1,propose:1,meetfam:1,ldr:1,accident:1,kidart:1,kidleave:1,spouseIll:1,
-  affair:1,exposed:1,loverpush:1,loverend:1,loanshark:1,collect:1,bankrupt:1,nightkeep:1,sugar:1,gangup:1,gangwash:1,afterjail:1};
+  affair:1,exposed:1,loverpush:1,loverend:1,loanshark:1,collect:1,bankrupt:1,nightkeep:1,sugar:1,gangup:1,gangwash:1,afterjail:1,
+  raid:1,nightpregF:1,nightpregM:1,nightlove:1,nightold:1,streamviral:1,streamstalk:1,streamout:1,
+  comeout:1,pride:1,outwork:1,samekid:1,bidoubt:1,realize:1,
+  harassWork:1,harassOut:1,nightharass:1,therapy:1,witness:1};
 
 function advanceYear(){
   if (!S || !S.alive) return;
@@ -1834,7 +2182,7 @@ function score(){
   if (S.friend) v += 30;
   if (S.job) v += S.job.pres*9;
   v += DEG[S.degree]*12 + S.age*1.2 + Object.keys(S.badges).length*10;
-  v -= S.exes*14 + S.conds.length*8 + (S.record?45:0) + (S.flags.bankrupt?30:0) + S.gang*18;
+  v -= S.exes*14 + S.conds.length*8 + (S.record?45:0) + (S.flags.bankrupt?30:0) + S.gang*18 + (S.flags.leaked?25:0);
   if (S.money < 0) v += S.money/18;
   return Math.max(0, Math.round(v));
 }
@@ -1863,6 +2211,15 @@ function epitaph(){
   if (S.badges["洗白了"]) b.push("最後走到了光裡");
   if (S.record) b.push("坐過牢");
   if (S.badges["上岸"]) b.push("靠自己上了岸");
+  if (S.flags.leaked) b.push("有些東西一直還在網路上");
+  if (S.badges["為了小孩離開"]) b.push("為了一個人收了手");
+  if (S.badges["轉型成功"]) b.push("把過去換成了別的東西");
+  if (S.badges["出櫃了"]) b.push("最後是以自己的樣子活著");
+  if (S.badges["走出來了"]) b.push("花了很久，但走出來了");
+  if (S.badges["說出來了"] || S.badges["我也是"]) b.push("曾經替自己說過話");
+  if (S.flags.silent && ill("創傷壓力")) b.push("有些事到最後都沒說");
+  if (S.flags.realized && S.orient !== "straight" && S.out === 0) b.push("有一句話一輩子沒說出口");
+  if (S.flags.fakeMarry) b.push("那場婚姻維持到最後");
   if (S.badges["在八大待過"] && S.money > 500) b.push("用很辛苦的方式賺到錢");
   if (S.money < -100) b.push("債還沒還完");
   return b.length ? b.join("・") : "平平安安";
@@ -1891,7 +2248,17 @@ function showEnd(){
 const row = (k,v) => '<span>'+k+'<em>'+v+'</em></span>';
 
 /* ===================== 存檔 ===================== */
+let heavyOn = true;
+const heavy = () => heavyOn;
+function syncHeavy(){
+  $("btnHeavy").innerHTML = "沉重劇情：" + (heavyOn ? "開" : "關") +
+    '<small>性騷擾、性侵與創傷相關的情節</small>';
+  try { localStorage.setItem("lifemachine.heavy", heavyOn ? "1" : "0"); } catch(e){}
+}
 let prevLives = [];
+function loadHeavy(){
+  try { const v = localStorage.getItem("lifemachine.heavy"); if (v !== null) heavyOn = v === "1"; } catch(e){}
+}
 function loadLives(){
   try { const r = JSON.parse(localStorage.getItem("lifemachine.lives") || "[]"); prevLives = Array.isArray(r) ? r : []; }
   catch(e){ prevLives = []; }
@@ -1933,13 +2300,18 @@ function render(){
 
   $("chips").innerHTML =
     S.traits.map(t=>'<b>'+t+'</b>').join("") +
+    (S.flags.realized && S.orient !== "straight"
+      ? '<b style="border-color:#C49BEC;color:#C49BEC">'+(S.orient==="gay"?"同性戀":"雙性戀")+
+        (S.out===2?"・已出櫃":S.out===1?"・只跟朋友說":"・還沒說")+'</b>' : "") +
     S.conds.map(c=>'<b class="ill">'+c+'</b>').join("") +
     (S.record ? '<b class="ill">前科</b>' : "") +
     (S.flags.bankrupt ? '<b class="ill">破產紀錄</b>' : "") +
-    (S.flags.night ? '<b class="ill">待過八大</b>' : "");
+    (S.flags.night ? '<b class="ill">'+(S.flags.stream?'開過台':'待過八大')+'</b>' : "") +
+    (S.flags.leaked ? '<b class="ill">影片外流</b>' : "");
 
   const fam = [];
-  if (S.partner) fam.push('<b>'+(S.partner.married?"配偶":"交往")+'</b> '+S.partner.name+' '+Math.round(S.partner.aff)+'%');
+  if (S.partner) fam.push('<b>'+(S.partner.married?"配偶":"交往")+'</b> '+S.partner.name+
+    (sameSex()?'<span style="opacity:.6">（同性）</span>':'')+' '+Math.round(S.partner.aff)+'%');
   if (S.kids.length) fam.push('<b>子女</b> '+S.kids.map(k=>k.name+"("+(S.age-k.born)+")").join("、"));
   if (S.friend) fam.push('<b>摯友</b> '+S.friend.name);
   if (S.house) fam.push('<b>房</b> '+S.house);
@@ -2041,7 +2413,8 @@ function rollBirth(){
   const t1 = t.splice(Math.floor(Math.random()*t.length),1)[0];
   const t2 = t.splice(Math.floor(Math.random()*t.length),1)[0];
   draft = {origin:wpick(ORIGINS), place:wpick(PLACES), home:wpick(HOMES), traits:[t1,t2], sex:sex,
-           name:makeName(sex), skin:pick(SKINS), hair:pick(HAIRS)};
+           name:makeName(sex), skin:pick(SKINS), hair:pick(HAIRS),
+           orient:wpick([{v:"straight",w:84},{v:"gay",w:7},{v:"bi",w:9}]).v};
   $("birthTitle").textContent = draft.name + "・" + draft.place.name;
   $("birthText").innerHTML =
     draft.origin.desc + "<br>" +
@@ -2075,7 +2448,8 @@ function resetAll(){
   $("startScreen").classList.add("on");
 }
 
-loadLives(); syncSpeedBtns(); rollBirth();
+loadHeavy(); syncHeavy(); loadLives(); syncSpeedBtns(); rollBirth();
+$("btnHeavy").onclick = () => { heavyOn = !heavyOn; syncHeavy(); };
 requestAnimationFrame(frame);
 })();
 </script>

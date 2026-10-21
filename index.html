@@ -891,6 +891,7 @@ function jobOK(j){
   if (n.tier && (TIER[S.uniTier] === undefined || TIER[S.uniTier] < n.tier)) return false;
   if (S.record && j.pres >= 3) return false;          // 有前科，正經單位不收
   if (S.flags.leaked && j.pres >= 4) return false;     // 影片還在網路上，高階職位會查
+  if (S.flags.noLic > 0 && /司機/.test(j.t)) return false;  // 駕照吊著，開不了車
   if (j.hidden) return false;                          // 八大與道上不會出現在求職清單
   return true;
 }
@@ -965,7 +966,7 @@ const AUTO = [
   {w:3,when:()=>S.age>=14&&S.age<=19,t:"跟爸媽大吵一架，摔門出去走了兩個小時。",e:{mood:-8,stress:8,social:2},tone:"bad"},
   {w:3,when:()=>S.age>=15&&S.age<=24,t:"熬夜打了一整個暑假的遊戲，度數又加深。",e:{health:-4,mood:7,intel:-2,fit:-3}},
   {w:2,when:()=>S.age>=15&&S.st.charm>65,t:"被街拍上傳到社群，意外爆紅三天。",e:{charm:6,social:6,mood:5},tone:"good"},
-  {w:2,when:()=>S.age>=16&&S.age<=22,t:"第一次騎車上路，差點撞上電線杆。",e:{fit:3,mood:4,health:-2}},
+  {w:2,when:()=>S.age>=18&&S.age<=24,t:"考到駕照，第一次騎車上路就差點撞上電線杆。",e:{fit:3,mood:4,health:-2}},
   {w:2,when:()=>S.age>=13&&S.age<=18&&has("內向"),t:"分組報告沒人找你，最後自己一組。",e:{mood:-8,intel:3},tone:"bad"},
   // —— 成年 ——
   {w:2,when:()=>S.age>=18,t:"統一發票中了兩百塊，開心了一整天。",e:{mood:3,cash:0.02}},
@@ -1066,6 +1067,19 @@ const KTRAIT = ["會念書","坐不住","愛畫畫","很貼心","悶葫蘆","很
 const hLeft = extra => (S.flags.hCount||0) < (S.hMax + (extra||0));
 const hMark = () => { S.flags.hCount = (S.flags.hCount||0) + 1; S.flags.harassed = true; };
 const CHOICE = [
+  {id:"noLicense",w:18,when:()=>S.age>=15&&S.age<=17&&!S.seen.noLicense,
+   t:"同學把鑰匙丟給你",d:"他說巷子裡沒有警察，騎一下又不會怎樣。你還要三年才能考駕照。",
+   c:[{l:"騎",e:{fit:3,social:5,mood:7,stress:6},g:"",run:()=>{
+        const d = Math.random();
+        if (d < 0.55) logit("你在巷子裡繞了兩圈，心跳很快但很爽。");
+        else if (d < 0.88){ money(-rnd(6,18)); add("mood",-14); add("social",-4);
+          logit("被警察攔下來。無照駕駛罰六千到兩萬四，車被牽走，爸爸還要跟著挨罰。","bad",true); }
+        else { add("health",-rnd(10,22)); getIll("舊傷"); money(-rnd(10,30)); add("mood",-16);
+          logit("自摔。鎖骨裂了，石膏打了兩個月，而且是無照，保險不理賠。","bad",true); }}},
+      {l:"說等滿十八再說",e:{intel:4,social:-4,mood:-2},g:"他們笑你膽小。"},
+      {l:"坐後座就好",e:{mood:4,social:3,health:-2},g:"",run:()=>{
+        if (chance(0.2)){ add("health",-8); logit("他催太快，過彎的時候你們一起倒在柏油路上。","bad"); }}}]},
+
   {id:"bully",w:7,when:()=>S.age>=4&&S.age<=11,
    t:"被同學欺負了",d:"有人搶走你的點心，還笑你的鞋子很舊。",
    c:[{l:"告訴老師",e:{mood:3,social:-5},g:"老師處理了，但你被叫抓耙子。"},
@@ -2026,18 +2040,30 @@ const CHOICE = [
       {l:"先跟小孩討論",e:{mood:8,social:4},g:"",run:()=>{S.kids.forEach(k=>k.bond=Math.min(100,k.bond+10));S.flags.dnr=true}}]},
 
   /* ---------- 意外與法律 ---------- */
-  {id:"dui",w:26,when:()=>S.draw.dui&&S.age>=20&&S.age<=65&&!S.record&&!S.seen.dui,
+  {id:"dui",w:26,when:()=>S.draw.dui&&!S.flags.dui&&S.age>=20&&S.age<=65&&!S.record&&!S.seen.dui,
    t:"你喝了，但只有三公里",d:"代駕要等四十分鐘，你的車就停在對面。",
    c:[{l:"叫代駕，等",e:{mood:-3,cash:-2,intel:3},g:"你在便利商店坐了四十分鐘。"},
       {l:"自己開",e:{stress:16},g:"",run:()=>{
         const d=Math.random();
-        if(d<0.62)logit("平安到家。你那晚睡得很好，後來才知道有多險。");
-        else if(d<0.90){money(-rnd(60,150));S.record=true;add("mood",-18);badge("酒駕前科");
-          logit("被攔下來。吊照、罰款、名字上了公布欄。","bad",true)}
-        else if(d<0.97){money(-rnd(100,260));add("health",-14);getIll("舊傷");S.record=true;add("mood",-24);
-          logit("你擦撞了一台機車。對方躺了四個月，你賠到脫一層皮。","bad",true)}
-        else{S.jail=ri(2,6);S.job=null;S.record=true;add("mood",-40);S.flags.killed=true;badge("撞死了人");
-          logit("對方騎機車，三十四歲。你這輩子都不會忘記那個聲音。","bad",true)}}},
+        if(d<0.55){ logit("平安到家。你那晚睡得很好，後來才知道有多險。"); }
+        else if(d<0.86){
+          money(-rnd(60,160)); S.record=true; S.flags.dui=true; S.flags.noLic=6;
+          add("mood",-22); add("social",-12); add("stress",16); badge("酒駕前科");
+          logit("酒測 0.42。公共危險罪，罰鍰加吊扣駕照，還要去上講習。","bad",true);
+          if(S.job&&chance(0.35)){ S.job=null; logit("公司查到了。他們說這種事沒辦法留人。","bad",true); }
+        }
+        else if(d<0.95){
+          money(-rnd(150,420)); add("health",-14); getIll("舊傷");
+          S.record=true; S.flags.dui=true; S.flags.noLic=12; add("mood",-28); add("social",-16); add("stress",24);
+          badge("撞傷了人");
+          logit("你擦撞了一台機車。對方躺了四個月，民事賠償加刑事和解，你賠到脫一層皮。","bad",true);
+          if(S.job){ S.job=null; logit("那段時間要跑法院，工作也沒了。","bad",true); }
+        }
+        else{
+          S.jail=ri(3,7); S.job=null; S.record=true; S.flags.dui=true; S.flags.noLic=99;
+          money(-rnd(300,800)); add("mood",-45); S.flags.killed=true; badge("撞死了人");
+          logit("對方騎機車，三十四歲。你這輩子都不會忘記那個聲音。","bad",true);
+        }}},
       {l:"車丟著，明天再來牽",e:{mood:2,cash:-3},g:"隔天早上你去牽車，多繳了停車費。"}]},
 
   {id:"whistle",w:26,when:()=>S.draw.whistle&&atWork()&&S.age>=26&&S.age<=58&&S.job.pres>=2&&!S.seen.whistle,
@@ -3054,6 +3080,15 @@ function yearlyDrift(){
   if (ill("憂鬱症")) { add("mood",-5); add("social",-1.5); }
   if (ill("肝指數過高")) { add("health",-2.6); add("charm",-0.8); }
   if (ill("酒精依賴")) { add("health",-3); add("mood",-3); add("intel",-1); }
+  if (S.flags.noLic > 0){
+    S.flags.noLic--;
+    add("stress",3); money(-6 * S.place.cost);
+    if (S.job && /司機/.test(S.job.t)){
+      S.job = null; add("mood",-10);
+      logit("駕照被吊扣，司機的工作當天就沒了。","bad",true);
+    }
+    if (S.flags.noLic === 0) logit("駕照終於拿回來了。你第一次開車開得很慢。","good",true);
+  }
   if (ill("賭癮")) { money(-Math.max(Math.abs(S.money)*0.12, 25)); add("mood",-3); add("stress",6); }
   if (ill("藥癮")) { add("health",-5); add("mood",-2); add("intel",-1.5); money(-30); }
   if (ill("創傷壓力")) {
@@ -3280,6 +3315,7 @@ function epitaph(){
   if (S.badges["給出去一塊"]) b.push("身上少了一塊，救了一個人");
   if (S.badges["吹哨者"]) b.push("說過一次實話，代價很大");
   if (S.flags.killed) b.push("有一個名字跟了你一輩子");
+  if (S.badges["撞傷了人"]) b.push("有一場車禍賠了很多年");
   if (S.badges["離開了"] || S.badges["走出來了"]) b.push("最後把自己撈了回來");
   if (S.badges["拿回來了"]) b.push("後來把自己穿回去了");
   if (S.badges["跟宿敵和解"]) b.push("跟那個人握了手");

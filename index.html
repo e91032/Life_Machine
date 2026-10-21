@@ -563,7 +563,24 @@ function react(tone){
 const SUR = "陳林黃張李王吳劉蔡楊許鄭謝郭洪曾邱廖賴徐周葉蘇莊呂江何蕭羅高潘朱簡鍾彭游詹胡施沈余盧梁趙顏柯翁魏孫戴范方宋鄧杜侯曹薛傅".split("");
 const GIV_M = ["家豪","志明","宗翰","俊傑","建宏","冠廷","彥廷","柏翰","承恩","子軒","泓瑜","明翰","又嘉","哲宇","品睿","建志","文雄","世傑","威霖","昱辰","仲軒","立群"];
 const GIV_F = ["淑芬","雅婷","怡君","佩珊","欣怡","詩涵","宜蓁","曉彤","品妍","芷晴","惠敏","郁婷","心妤","映竹","秀英","佳穎","語彤","靜宜","宛儒","美玲","子涵","蕙如"];
-const makeName = sex => pick(SUR) + pick(sex === "M" ? GIV_M : GIV_F);
+const given = sex => pick(sex === "M" ? GIV_M : GIV_F);
+const makeName = (sex, sur) => (sur || pick(SUR)) + given(sex);
+// 小孩跟你同姓，而且不會跟家裡任何人撞名
+function takenNames(){
+  const t = [S.name];
+  if (S.partner) t.push(S.partner.name);
+  S.kids.forEach(k => t.push(k.name));
+  S.sibs.forEach(b => t.push(b.name));
+  return t;
+}
+function kidName(){
+  const sx = chance(.5) ? "M" : "F", sur = S.sur || pick(SUR), taken = takenNames();
+  for (let i = 0; i < 30; i++){
+    const n = makeName(sx, sur);
+    if (taken.indexOf(n) < 0) return n;
+  }
+  return sur + given(sx) + pick(["昇","祐","安","晴"]);
+}
 
 const ORIGINS = [
   {name:"含金湯匙",desc:"家裡在信義區有兩間房，爸媽的期待比房價還高。",money:600,w:7,st:{intel:8,charm:10,health:5,luck:5},tag:"家境優渥"},
@@ -572,7 +589,7 @@ const ORIGINS = [
   {name:"隔代教養",desc:"阿嬤帶大的孩子，廟口長大，有點野。",money:5,w:13,st:{fit:12,mood:-5,intel:-5,social:6},tag:"阿嬤帶大"},
   {name:"書香門第",desc:"家裡牆壁都是書，電視只能看公視。",money:200,w:12,st:{intel:15,charm:-5,fit:-5},tag:"書香門第"},
   {name:"做生意的",desc:"家裡開店，從小在櫃台後面寫作業，學會算錢也學會賠錢。",money:90,w:14,st:{charm:8,social:10,intel:3,stress:8},tag:"生意囝仔"},
-  {name:"負債家庭",desc:"爸爸欠了一筆講不清楚的錢，家裡的電話都不敢接。",money:-80,w:8,st:{fit:5,mood:-12,stress:20,luck:-8},tag:"背債長大"}
+  {name:"負債家庭",desc:"爸爸欠了一筆講不清楚的錢，家裡的電話都不敢接。",money:6,w:8,st:{fit:5,mood:-12,stress:20,luck:-8},tag:"背債長大",debtAt18:true}
 ];
 const PLACES = [
   {name:"台北市",w:16,cost:1.35,st:{intel:8,social:6,charm:5,stress:8}},
@@ -651,8 +668,13 @@ let S = null, draft = null, rerolls = 3, pending = null;
 // 出生就有的手足，會跟你一輩子
 function makeSibs(d){
   const k = d.home.kid, out = [];
-  const mk = older => { const sx = chance(.5)?"M":"F";
-    return {name:makeName(sx), sex:sx, older:older, bond:ri(55,80), gap:ri(2,6)}; };
+  const sur = d.name[0], used = [d.name];
+  const mk = older => {
+    const sx = chance(.5)?"M":"F";
+    let n = makeName(sx, sur);
+    for (let i = 0; i < 30 && used.indexOf(n) >= 0; i++) n = makeName(sx, sur);
+    used.push(n);
+    return {name:n, sex:sx, older:older, bond:ri(55,80), gap:ri(2,6)}; };
   if (k === "老么"){ out.push(mk(true)); if (chance(.45)) out.push(mk(true)); }
   else if (k === "老大"){ out.push(mk(false)); if (chance(.4)) out.push(mk(false)); }
   else if (k === "老二"){ out.push(mk(true)); if (chance(.55)) out.push(mk(false)); }
@@ -666,7 +688,7 @@ function newState(d){
   d.traits.forEach(t => merge(t.st));
   for (const k in st) st[k] = Math.max(1, Math.min(100, st[k]));
   return {
-    name:d.name, sex:d.sex, origin:d.origin, place:d.place, home:d.home,
+    name:d.name, sur:d.name[0], sex:d.sex, origin:d.origin, place:d.place, home:d.home,
     skin:d.skin, hair:d.hair,
     traits:d.traits.map(t=>t.n), conds:[],
     age:0, alive:true, st:st, money:d.origin.money,
@@ -1162,7 +1184,7 @@ const CHOICE = [
   {id:"kid",w:46,when:()=>married()&&!sameSex()&&S.age>=25&&S.age<=44&&S.kids.length<4,
    t:"要生小孩嗎",d:"醫生說身體沒問題，問題只有「要不要」。",
    c:[{l:"生",e:{mood:14,cash:-30,health:-4,stress:12},g:"",run:()=>{
-        const k={name:makeName(chance(.5)?"M":"F"),born:S.age,bond:70,trait:pick(KTRAIT)};
+        const k={name:kidName(),born:S.age,bond:70,trait:pick(KTRAIT)};
         S.kids.push(k); badge("當了爸媽");
         logit("你的小孩"+k.name+"出生了。","good",true);
       }},
@@ -1291,16 +1313,16 @@ const CHOICE = [
 
   {id:"accident",w:7,when:()=>S.partner&&!married()&&!sameSex()&&S.age>=19&&S.age<=36&&S.kids.length<3,
    t:"驗孕棒是兩條線",d:"你們都還沒準備好。",
-   c:[{l:"結婚，把小孩生下來",e:{mood:6,cash:-50,stress:18},g:"",run:()=>{S.partner.married=true;S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:70,trait:pick(KTRAIT)});badge("奉子成婚");logit("婚禮辦得很趕，但你們笑得很開心。","good",true)}},
-      {l:"生，但先不結婚",e:{mood:2,cash:-35,stress:14,social:-6},g:"",run:()=>{S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:70,trait:pick(KTRAIT)});logit("你們一起帶小孩，只是沒有那張紙。",null,true)}},
+   c:[{l:"結婚，把小孩生下來",e:{mood:6,cash:-50,stress:18},g:"",run:()=>{S.partner.married=true;S.kids.push({name:kidName(),born:S.age,bond:70,trait:pick(KTRAIT)});badge("奉子成婚");logit("婚禮辦得很趕，但你們笑得很開心。","good",true)}},
+      {l:"生，但先不結婚",e:{mood:2,cash:-35,stress:14,social:-6},g:"",run:()=>{S.kids.push({name:kidName(),born:S.age,bond:70,trait:pick(KTRAIT)});logit("你們一起帶小孩，只是沒有那張紙。",null,true)}},
       {l:"討論後決定不要",e:{mood:-15,health:-6,stress:16},g:"",run:()=>{S.partner.aff-=12;logit("那之後你們有一陣子不太說話。","bad")}}]},
 
   {id:"infert",w:7,when:()=>married()&&!sameSex()&&S.kids.length===0&&S.age>=31&&S.age<=44&&!S.flags.nokid,
    t:"試了三年都沒消息",d:"醫生說可以做人工，但不保證。",
    c:[{l:"做試管，砸錢砸時間",e:{health:-8,mood:-8,cash:-180,stress:22},g:"",run:()=>{
-        if (roll(0.45)){S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:75,trait:pick(KTRAIT)});add("mood",26);badge("求來的孩子");logit("第四次，成功了。","good",true)}
+        if (roll(0.45)){S.kids.push({name:kidName(),born:S.age,bond:75,trait:pick(KTRAIT)});add("mood",26);badge("求來的孩子");logit("第四次，成功了。","good",true)}
         else {add("mood",-18);S.partner.aff-=8;logit("試了四次，最後決定停下來。","bad",true)}}},
-      {l:"去領養",e:{mood:14,cash:-40,stress:8},g:"",run:()=>{S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age-2,bond:65,trait:pick(KTRAIT),trait:pick(KTRAIT)});badge("領養");logit("家裡多了一個人，從第一天就是你的小孩。","good",true)}},
+      {l:"去領養",e:{mood:14,cash:-40,stress:8},g:"",run:()=>{S.kids.push({name:kidName(),born:S.age-2,bond:65,trait:pick(KTRAIT),trait:pick(KTRAIT)});badge("領養");logit("家裡多了一個人，從第一天就是你的小孩。","good",true)}},
       {l:"接受兩個人就好",e:{mood:7,stress:-12},g:"",run:()=>{S.flags.nokid=true;S.partner.aff=Math.min(100,S.partner.aff+8)}}]},
 
   {id:"spouseJob",w:6,when:()=>married()&&S.age>=30&&S.age<=56,
@@ -1413,7 +1435,7 @@ const CHOICE = [
   {id:"loverkid",w:9,when:()=>S.lover&&S.lover.years>=1&&S.age<=50,
    t:"她說她懷孕了",d:"訊息只有一行，你看了很久沒有回。",
    c:[{l:"負責到底",e:{mood:-6,cash:-120,stress:28},g:"",run:()=>{
-        S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:55,trait:pick(KTRAIT)});
+        S.kids.push({name:kidName(),born:S.age,bond:55,trait:pick(KTRAIT)});
         S.lover.risk+=40; badge("外面的孩子"); logit("你多了一個不能帶回家的小孩。","bad",true); }},
       {l:"給一筆錢，請她處理",e:{mood:-18,cash:-80,stress:24},g:"",run:()=>{S.lover.risk+=15;logit("你們之後再也沒有好好說過話。","bad")}},
       {l:"全部坦白",e:{mood:-14,stress:-10},g:"",run:()=>{S.lover.risk=100;logit("你把一切都說了。接下來的事不由你決定。","bad",true)}}]},
@@ -1523,20 +1545,20 @@ const CHOICE = [
   {id:"nightpregF",w:16,when:()=>inNight()&&S.sex==="F"&&S.orient!=="gay"&&S.age>=20&&S.age<=41&&S.kids.length<4,
    t:"你發現自己懷孕了",d:"你在廁所裡坐了很久，班表還貼在手機上。",
    c:[{l:"生下來，離開這行",e:{mood:12,stress:14,cash:-60},g:"",run:()=>{
-        S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:80,trait:pick(KTRAIT)});
+        S.kids.push({name:kidName(),born:S.age,bond:80,trait:pick(KTRAIT)});
         S.job=null; badge("為了小孩離開"); logit("你最後一天上班沒跟任何人說。","good",true)}},
       {l:"生下來，請家人幫忙帶",e:{mood:2,stress:22,health:-6},g:"",run:()=>{
-        S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:45,trait:pick(KTRAIT)});
+        S.kids.push({name:kidName(),born:S.age,bond:45,trait:pick(KTRAIT)});
         S.flags.nightknown=true; logit("小孩在阿嬤家長大，你一個月回去兩次。","bad",true)}},
       {l:"沒有留",e:{mood:-18,health:-8,stress:18},g:"",run:()=>{logit("你休了三天假，第四天照常上班。","bad",true)}}]},
 
   {id:"nightpregM",w:12,when:()=>inNight()&&S.sex==="M"&&S.age>=22&&S.age<=46&&S.kids.length<4,
    t:"她說她懷孕了",d:"對方是店裡認識的，你們沒有講過以後。",
    c:[{l:"負責，一起生",e:{mood:6,cash:-80,stress:20},g:"",run:()=>{
-        S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:65,trait:pick(KTRAIT)});
+        S.kids.push({name:kidName(),born:S.age,bond:65,trait:pick(KTRAIT)});
         if(!S.partner)S.partner=partnerNew(58); logit("你們搬到一起住，房子很小。",null,true)}},
       {l:"按月給錢，不住一起",e:{mood:-8,cash:-50,stress:14},g:"",run:()=>{
-        S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:30,trait:pick(KTRAIT)});
+        S.kids.push({name:kidName(),born:S.age,bond:30,trait:pick(KTRAIT)});
         logit("你每個月轉一次帳，一年見兩次面。","bad",true)}},
       {l:"說這不關你的事",e:{mood:-14,social:-12,stress:10},g:"",run:()=>{logit("消息在圈子裡傳開，沒有人想跟你同班。","bad",true)}}]},
 
@@ -1684,11 +1706,11 @@ const CHOICE = [
   {id:"samekid",w:24,when:()=>sameSex()&&married()&&S.kids.length<3&&S.age>=27&&S.age<=46,
    t:"你們想要一個小孩",d:"這件事對你們來說，比別人多繞好幾圈。",
    c:[{l:"出國做人工生殖",e:{mood:14,cash:-320,stress:24,health:-5},g:"",run:()=>{
-        if(roll(0.55)){S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:80,trait:pick(KTRAIT)});
+        if(roll(0.55)){S.kids.push({name:kidName(),born:S.age,bond:80,trait:pick(KTRAIT)});
           badge("繞了一大圈的孩子"); logit("兩次之後成功了。你們在機場抱著她哭。","good",true)}
         else{add("mood",-16);logit("試了兩次都沒成，錢也見底了。","bad",true)}}},
       {l:"走收養的流程",e:{mood:10,cash:-70,stress:20},g:"",run:()=>{
-        if(roll(0.5)){S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age-3,bond:70,trait:pick(KTRAIT),trait:pick(KTRAIT)});
+        if(roll(0.5)){S.kids.push({name:kidName(),born:S.age-3,bond:70,trait:pick(KTRAIT),trait:pick(KTRAIT)});
           badge("領養"); logit("程序走了兩年，她進門那天什麼都沒帶。","good",true)}
         else{add("mood",-14);logit("審查沒過，理由寫得很模糊。","bad",true)}}},
       {l:"兩個人就很完整",e:{mood:9,stress:-12},g:"",run:()=>{S.flags.nokid=true;S.partner.aff=Math.min(100,S.partner.aff+10)}}]},
@@ -2530,6 +2552,13 @@ function milestone(){
   if (a === 6){ logit("背起書包上小學，書包比你還重。",null,true); return null; }
   if (a === 12) return junior();
   if (a === 15) return exam15();
+  if (a === 18 && S.origin.debtAt18 && !S.flags.tookDebt){
+    S.flags.tookDebt = true;
+    return {t:"你滿十八歲那天",d:"爸爸把一疊單子推到你面前，說「這些以後要靠你了」。",
+      c:[{l:"接下來",e:{mood:-14,stress:22},g:"",run:()=>{money(-rnd(90,180));S.debtKind="卡債";logit("你還沒開始賺錢，就先欠了一筆。","bad",true)}},
+         {l:"說這不是我的債",e:{mood:-10,social:-10,stress:10},g:"",run:()=>{logit("你搬了出去。家裡的電話你也不接了。","bad",true)}},
+         {l:"先幫忙還一點，剩下慢慢談",e:{mood:-6,stress:14},g:"",run:()=>{money(-rnd(30,70));logit("你開始半工半讀。",null,true)}}]};
+  }
   if (a === 18) return exam18();
   if (a === 19 && S.flags.redo){ S.flags.redo = false; return exam18(); }
   if (S.path === "uni" && a === (S.uniEnd||22)) return afterUni();
@@ -2806,8 +2835,8 @@ function yearlyEconomy(){
   if (S.flags.loan > 0){ cost += 42; S.flags.loan--; if (S.flags.loan === 0) logit("房貸終於繳完了。","good",true); }
   money(-cost);
 
-  // 債務會利滾利
-  if (S.money < -15){
+  // 債務會利滾利（但十八歲以前，那是大人的事）
+  if (S.age >= 18 && S.money < -15){
     if (!S.debtKind) S.debtKind = "卡債";
     const rate = S.debtKind === "錢莊" ? rnd(0.3,0.55) : S.debtKind === "卡債" ? rnd(0.09,0.15) : 0.03;
     money(S.money * rate);
@@ -2820,7 +2849,7 @@ function yearlyEconomy(){
     logit("你把債還清了。那張收據你留了很久。","good",true);
   }
 
-  if (S.money < 0){ S.debtYears++; add("mood",-6); add("stress",8);
+  if (S.age >= 18 && S.money < 0){ S.debtYears++; add("mood",-6); add("stress",8);
     if (S.debtYears === 3) logit("帳單堆成一疊，你開始算哪一張可以晚點繳。","bad");
   } else S.debtYears = 0;
 }

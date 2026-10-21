@@ -707,7 +707,8 @@ function newState(d){
             dnakid:chance(.08), donate:chance(.075), coma:chance(.045), inherit:chance(.30),
             hui:chance(.14), cancelled:chance(.11), famous:chance(.09),
             childloss:chance(.045), friendgone:chance(.24),
-            rival:chance(.5), mentor:chance(.5) },
+            rival:chance(.5), mentor:chance(.5),
+            echoBully:chance(.35), echoLate:chance(.4) },
     log:[], badges:{}, flags:{}, seen:{}, debtYears:0
   };
 }
@@ -911,6 +912,7 @@ const RAISE = {
   free:  ()=>"案子接不完，一年可以做到 "+S.job.pay+" 萬。"
 };
 function takeJob(j){
+  if (!S.flags.firstJob) S.flags.firstJob = j.t;
   const tm = {"頂大":1.16,"國立":1.06,"私立":0.97,"科大":0.92}[S.uniTier] || 1;
   const em = 1 + S.econ * 0.06;
   S.job = {t:j.t, pay:Math.max(30,Math.round(j.pay*tm*em*rnd(0.9,1.12))),
@@ -2450,6 +2452,143 @@ const CHOICE = [
         else logit("地址是舊的。你在那條街上站了很久。","bad",true)}},
       {l:"寫一封信",e:{mood:12,intel:4},g:"",run:()=>{if(roll(0.5))logit("兩個月後你收到回信，字抖得很厲害但寫滿了三張。","good",true)}},
       {l:"算了",e:{mood:-8},g:"你把那個念頭放回去了。"}]},
+/* ---------- 回聲：很久以前的事，回來找你 ---------- */
+  {id:"echoPiano",w:30,when:()=>S.flags.talent==="鋼琴"&&S.age>=26&&S.age<=66,
+   t:"有人問你還會不會彈",d:"那是你國小被逼著練了六年的東西，你已經二十年沒碰了。",
+   c:[{l:"在朋友婚禮上彈一首",e:{charm:9,mood:16,social:8,stress:-10},g:"",run:()=>{
+        badge("那六年沒有白費"); logit("手指自己記得。彈完全場安靜了兩秒才鼓掌。","good",true)}},
+      {l:"買一台琴，重新開始練",e:{mood:12,intel:4,cash:-60,stress:-12},g:"",run:()=>{S.flags.talent="鋼琴";badge("又開始彈了")}},
+      {l:"說早就忘光了",e:{mood:-7},g:"那天晚上你在手機上找了一首以前彈過的曲子。"}]},
+
+  {id:"echoBall",w:30,when:()=>(S.flags.talent==="籃球"||S.badges["校隊出身"])&&S.age>=38&&S.age<=60,
+   t:"膝蓋在提醒你一些事",d:"醫生說是以前運動留下來的，年輕的時候練得太兇。",
+   c:[{l:"認了，改游泳",e:{health:8,fit:4,mood:4},g:"你每週三次，泳池的味道變成新的習慣。"},
+      {l:"還是想打，護具穿好",e:{mood:10,fit:5,health:-7},g:"",run:()=>{getIll("舊傷");badge("還在球場上")}},
+      {l:"改教小孩打球",e:{mood:14,social:9,stress:-12},g:"",run:()=>{badge("把球傳下去");
+        S.kids.forEach(k=>k.bond=Math.min(100,k.bond+12))}}]},
+
+  {id:"echoCode",w:30,when:()=>S.flags.talent==="程式"&&S.age>=24&&S.age<=52&&(!S.job||S.job.cat!=="tech"),
+   t:"你想起小時候寫的那個東西",d:"那是你第一個會動的程式，醜得要命但你記得當時的感覺。",
+   c:[{l:"砸半年自學，轉職",e:{intel:10,stress:20,cash:-40,mood:6},g:"",run:()=>{
+        const j=JOBS.filter(x=>x.cat==="tech");
+        if(roll(0.5)&&j.length){takeJob(pick(j));badge("轉職成功");logit("三十幾歲重新當新人，但你每天醒來都想去上班。","good",true)}
+        else{add("mood",-12);logit("投了八十封履歷，沒有人要沒有經驗的中年人。","bad",true)}}},
+      {l:"當興趣，週末寫一點",e:{intel:6,mood:9,stress:-10},g:"你做了一個只有自己在用的小工具。"},
+      {l:"算了，那是小孩子的事",e:{mood:-6},g:"你把那個資料夾留著，但沒有打開。"}]},
+
+  {id:"echoBully",w:16,when:()=>S.draw.echoBully&&S.seen.bully&&S.age>=36&&S.age<=58,
+   t:"你認出了那張臉",d:"客戶帶來的人，就是小學那個搶你點心的。他好像完全不記得你。",
+   c:[{l:"當面提那件事",e:{mood:10,stress:14,charm:3},g:"",run:()=>{
+        if(roll(0.5)){add("mood",12);badge("把話說開了");logit("他愣了很久，然後很認真地道歉。","good",true)}
+        else{add("mood",-8);logit("他笑著說「小孩子的事而已啦」。","bad",true)}}},
+      {l:"專業地把案子做完",e:{intel:4,mood:6,charm:5},g:"你發現自己其實已經不在意了。"},
+      {l:"藉機讓他難看",e:{mood:4,social:-8,stress:12},g:"你贏了，但回家路上心情很複雜。"}]},
+
+  {id:"echoMentorLate",w:18,when:()=>S.draw.echoLate&&!S.mentor&&!S.badges["遇到了好老師"]&&S.age>=48&&S.age<=68,
+   t:"你終於聽懂了那句話",d:"當年有個人想教你，你說不用。他講過一句話，你三十年後才懂。",
+   c:[{l:"去找他",e:{mood:14,stress:-10,cash:-20},g:"",run:()=>{
+        if(roll(0.45)){badge("補上了那一課");logit("他已經很老了，但還記得你。他說「我等這句話等很久」。","good",true)}
+        else logit("打聽到的時候，他已經走了三年。","bad",true)}},
+      {l:"把那句話用在自己帶的人身上",e:{mood:12,intel:6,social:7},g:"",run:()=>{badge("接棒了")}},
+      {l:"想想就算了",e:{mood:-6,intel:3},g:"你把那句話寫在便條紙上，貼在電腦旁邊。"}]},
+
+  {id:"echoClass",w:26,when:()=>S.badges["當過班長"]&&S.age>=40&&S.age<=70,
+   t:"社區要選主委",d:"有人說你以前就很會管事，推了你出來。",
+   c:[{l:"接下來",e:{social:12,stress:18,charm:5,mood:4},g:"",run:()=>{badge("又當了一次");
+        if(roll(0.5)){add("mood",10);logit("你把停車場的爛問題解決了，大家開始叫你主委。","good")}
+        else{add("social",-8);logit("每天都有人來抱怨，你後悔了。","bad")}}},
+      {l:"推給別人",e:{mood:3,social:-4},g:"你說你不是那塊料了。"}]},
+
+  {id:"echoDog",w:26,when:()=>S.flags.pet&&S.age>=58,
+   t:"你又在看領養的照片",d:"咪咪走了幾十年了，你一直說不要再養。",
+   c:[{l:"去領養一隻老狗",e:{mood:18,health:4,fit:3,stress:-16,cash:-20},g:"",run:()=>{
+        badge("又養了一隻"); logit("牠也不年輕了。你們兩個慢慢走。","good",true)}},
+      {l:"只去當志工",e:{mood:11,social:7,fit:3},g:"你每週六去遛別人的狗。"},
+      {l:"不要了，捨不得再一次",e:{mood:-8},g:"你把頁面關掉了。"}]},
+
+  {id:"echoFirst",w:26,when:()=>S.seen.crush1&&S.age>=42&&S.age<=66,
+   t:"國中那個人傳訊息來",d:"三十年了。大頭貼是一家人的合照。",
+   c:[{l:"約出來喝杯咖啡",e:{mood:12,stress:10},g:"",run:()=>{
+        if(S.partner&&chance(0.3)){S.partner.aff-=12;add("mood",-6);logit("回家以後你被問了很多問題。","bad")}
+        else logit("你們聊了兩個小時，大部分在講以前的老師。","good",true)}},
+      {l:"禮貌寒暄，然後放著",e:{mood:5,intel:3},g:"你們互相按了讚，然後就沒有了。"},
+      {l:"沒有回",e:{mood:-5},g:"那則訊息你留在收件匣裡很久。"}]},
+
+  {id:"echoRepeat",w:36,when:()=>S.flags.repeat&&kidIn(17,19),
+   t:"小孩說他想重考",dyn:()=>{const k=kidIn(17,19);return k.name+"說要再拚一年。你想起自己當年。"},
+   c:[{l:"全力支持，你懂那種感覺",e:{mood:12,cash:-50},g:"",run:()=>{const k=kidIn(17,19);if(k)k.bond=Math.min(100,k.bond+20);badge("懂他的那個人")}},
+      {l:"勸他不要，你知道有多苦",e:{mood:-4,stress:8},g:"",run:()=>{const k=kidIn(17,19);if(k)k.bond-=10}},
+      {l:"把你當年的事講給他聽",e:{mood:9,intel:4},g:"",run:()=>{const k=kidIn(17,19);if(k)k.bond=Math.min(100,k.bond+14)}}]},
+
+  {id:"echoArmy",w:32,when:()=>S.flags.army&&S.age>=42&&S.age<=68,
+   t:"當兵的群組跳出來了",d:"二十幾年沒聯絡，有人把大家拉回同一個群。",
+   c:[{l:"去聚",e:{mood:14,social:10,stress:-12,cash:-10},g:"",run:()=>{badge("老兵聚會");
+        if(!S.friend&&roll(0.4)){S.friend={name:makeName(chance(.5)?"M":"F"),bond:70};logit("有個人你當年很討厭，現在變成最聊得來的。","good",true)}}},
+      {l:"潛水看就好",e:{mood:4},g:"你把群組設成免打擾。"},
+      {l:"退出群組",e:{mood:-3,social:-4},g:"那段日子你不想再提。"}]},
+
+  {id:"echoAbroad",w:32,when:()=>(S.badges["留過學"]||S.badges["環遊世界"])&&S.age>=60,
+   t:"你想再去一次那個地方",d:"當年住過的那條街，不知道還在不在。",
+   c:[{l:"訂機票，一個人去",e:{mood:22,health:-5,cash:-120,stress:-18},g:"",run:()=>{
+        badge("又去了一次"); logit("房東太太的店還在，只是換成她女兒在顧。","good",true)}},
+      {l:"帶家人一起去",e:{mood:18,cash:-240,social:6},g:"",run:()=>{
+        S.kids.forEach(k=>k.bond=Math.min(100,k.bond+12));badge("帶家人回去過")}},
+      {l:"在網路上看街景就好",e:{mood:6,stress:-6},g:"你把那條街從頭滑到尾。"}]},
+
+  {id:"echoPoor",w:26,when:()=>(S.origin.tag==="刻苦出身"||S.origin.tag==="阿嬤帶大"||S.origin.tag==="背債長大")&&S.money>600&&S.age>=42,
+   t:"你站在以前住的地方前面",d:"那棟樓還在，鐵門一樣會卡住。你現在買得起整條街。",
+   c:[{l:"把那間買下來",e:{mood:16,cash:-350},g:"",run:()=>{badge("買回了那間房");logit("你沒有住進去，只是偶爾去開門透氣。","good",true)}},
+      {l:"捐一筆錢給以前讀的學校",e:{mood:18,social:12,cash:-150},g:"",run:()=>{badge("回饋了")}},
+      {l:"看一看就走",e:{mood:8,intel:4},g:"你在車上坐了很久才發動。"}]},
+
+  {id:"echoVoc",w:32,when:()=>S.flags.voc&&S.age>=38&&S.age<=62,
+   t:"有人說你「只有高職畢業」",d:"會議上那句話講得很輕，但你整個下午都在想。",
+   c:[{l:"用結果讓他閉嘴",e:{intel:5,stress:16,mood:6},g:"",run:()=>{
+        if(roll(0.55)){if(S.job)S.job.pay=Math.round(S.job.pay*1.2);add("mood",14);badge("做給他看");logit("半年後那個案子是你帶的。","good",true)}
+        else add("mood",-10)}},
+      {l:"去念在職專班",e:{intel:10,cash:-80,stress:18},g:"",run:()=>{if(DEG[S.degree]<2){S.degree="大學";badge("補了那張紙")}}},
+      {l:"不在意，手藝比學歷實在",e:{mood:9,stress:-10,fit:3},g:"你回去把自己的工具擦了一遍。"}]},
+
+  {id:"echoFirstJob",w:32,when:()=>S.age>=50&&S.age<=72&&S.badges["高中就打工"],
+   t:"你經過以前打工的那間店",d:"招牌換過了，但位置一樣。你十七歲在這裡站過一整個暑假。",
+   c:[{l:"進去買一杯",e:{mood:12,stress:-8},g:"店員很年輕，動作跟你當年一樣笨拙。"},
+      {l:"跟小孩講那段",e:{mood:10,social:4},g:"",run:()=>{S.kids.forEach(k=>k.bond=Math.min(100,k.bond+8))}},
+      {l:"走過去就算了",e:{mood:3},g:"你放慢了腳步，但沒有停。"}]},
+
+  {id:"echoParent",w:30,when:()=>kidIn(10,22),
+   t:"你聽見自己講出爸爸的話",dyn:()=>{const k=kidIn(10,22);return "你對"+k.name+"吼完之後才發現，那句話一字不差，是你爸當年對你說的。"},
+   c:[{l:"馬上回去道歉",e:{mood:12,charm:4,intel:5},g:"",run:()=>{const k=kidIn(10,22);if(k)k.bond=Math.min(100,k.bond+18);badge("在那裡停住了")}},
+      {l:"裝沒事，但開始注意",e:{mood:4,intel:3},g:"你後來講話變慢了一點。"},
+      {l:"算了，我爸也是這樣過來的",e:{mood:-8,stress:8},g:"",run:()=>{const k=kidIn(10,22);if(k)k.bond-=14}}]},
+
+  {id:"echoGang",w:34,when:()=>(S.badges["金盆洗手"]||S.badges["洗白了"])&&S.age>=45,
+   t:"有個年輕人來找你",d:"他說他聽過你的名字，想跟著你做。",
+   c:[{l:"叫他回去念書",e:{mood:14,social:4},g:"",run:()=>{badge("擋下一個人");
+        logit("你把他罵了一頓，然後塞了錢叫他去補習。","good",true)}},
+      {l:"幫他找一份正經工作",e:{mood:12,social:8,cash:-30},g:"",run:()=>{badge("擋下一個人")}},
+      {l:"看著他，想起自己",e:{mood:-8,stress:10},g:"",run:()=>{if(chance(0.4)){S.gang=Math.max(S.gang,1);logit("你發現自己其實沒有真的走乾淨。","bad",true)}}}]},
+
+  {id:"echoNight",w:26,when:()=>S.flags.night&&!inNight()&&S.age>=45,
+   t:"有人認出你了",d:"在小孩學校的家長會上，有個人一直看你。",
+   c:[{l:"大方打招呼",e:{charm:6,mood:10,social:4,stress:-8},g:"",run:()=>{badge("不躲了");
+        logit("她也在那裡做過。你們後來變成會一起接小孩的朋友。","good",true)}},
+      {l:"裝不認識",e:{mood:-10,stress:16},g:"你那天提早走了。"},
+      {l:"先一步跟家人講清楚",e:{mood:8,stress:-12},g:"",run:()=>{
+        if(S.partner){if(roll(0.6)){S.partner.aff=Math.min(100,S.partner.aff+12);logit("他說他早就知道，而且不在意。","good",true)}
+        else{S.partner.aff-=20;logit("他沉默了很久。","bad",true)}}}}]},
+
+  {id:"echoTop",w:32,when:()=>S.school==="第一志願"&&S.age>=40&&S.age<=62,
+   t:"同學會的那張桌子",d:"當年第一志願那一班，現在一半在國外，一半在開會。有人問你「你還好嗎」。",
+   c:[{l:"老實說現在過得普通",e:{mood:10,social:6,stress:-12},g:"",run:()=>{badge("誠實的那個");
+        logit("意外有三個人跟著說「我也是」。那晚大家都鬆了。","good",true)}},
+      {l:"把話講得漂亮一點",e:{charm:5,mood:-6,stress:10},g:"回家的路上你很累。"},
+      {l:"沒有去",e:{mood:-5,social:-5},g:"你說那天剛好有事。"}]},
+
+  {id:"echoLost",w:34,when:()=>S.flags.lostKid&&S.age>=60,
+   t:"又到了那一天",d:"每年這個日子，你都會買一樣的花。",
+   c:[{l:"去看看他",e:{mood:-10,stress:-14},g:"",run:()=>{add("mood",16);logit("你在那裡坐了一下午，講了很多話。",null,true)}},
+      {l:"做他以前最愛吃的菜",e:{mood:-6,stress:-10},g:"",run:()=>{add("mood",12);if(S.partner)S.partner.aff=Math.min(100,S.partner.aff+10)}},
+      {l:"今年不想去",e:{mood:-12,stress:10},g:"你在家裡坐了一整天。"}]},
 
   /* ---------- 道上 ---------- */
   {id:"gangin",w:26,when:()=>S.gang===0&&!S.record&&S.age>=15&&S.age<=26&&S.st.fit>=52&&(S.flags.voc||S.school==="後段高中"||S.school==="社區高中"||S.money<25),
@@ -2981,7 +3120,10 @@ const CORE = {confess:1,netdate:1,blind:1,office:1,propose:1,kid:1,samekid:1,fri
 const THREAD = {sibFight:1,sibCompare:1,sibBorrow:1,sibCare:1,sibLate:1,
   kidExam:1,kidWork:1,kidNest:1,kidWed:1,kidFar:1,kidBack:1,kidart:1,kidleave:1,
   rivalBorn:1,rivalWork:1,rivalEnd:1,mentorMeet:1,mentorFall:1,
-  oldAlone:1,oldStuff:1,oldSee:1,homecome:1};
+  oldAlone:1,oldStuff:1,oldSee:1,homecome:1,
+  echoPiano:1,echoBall:1,echoCode:1,echoBully:1,echoMentorLate:1,echoClass:1,echoDog:1,
+  echoFirst:1,echoRepeat:1,echoArmy:1,echoAbroad:1,echoPoor:1,echoVoc:1,echoFirstJob:1,
+  echoParent:1,echoGang:1,echoNight:1,echoTop:1,echoLost:1};
 const REPEATABLE = {invest:1,scam:1,affair:1,bully:1,picky:1,ex:1,lotto:1,movecity:1,spouseJob:1,roommate:1,layoff:1,jump:1,
   confess:1,blind:1,office:1,netdate:1,kid:1,propose:1,meetfam:1,ldr:1,accident:1,kidart:1,kidleave:1,spouseIll:1,
   affair:1,exposed:1,loverpush:1,loverend:1,loanshark:1,collect:1,bankrupt:1,nightkeep:1,sugar:1,gangup:1,gangwash:1,afterjail:1,
@@ -3112,12 +3254,84 @@ function epitaph(){
   if (S.money < -100) b.push("債還沒還完");
   return b.length ? b.join("・") : "平平安安";
 }
+// 把流水帳寫成一段話
+function retrospect(){
+  const B = S.badges, F = S.flags, out = [];
+  out.push(S.name + "出生在" + S.place.name + "，" + S.origin.desc.replace(/。$/,"") + "。");
+
+  // 讀書與第一份工作
+  const sch = [];
+  if (S.school) sch.push("念的是" + S.school);
+  if (S.uniTier) sch.push(S.uniTier + "畢業");
+  if (DEG[S.degree] >= 3) sch.push("後來還拿了" + S.degree);
+  if (B["重考過"]) sch.push("中間重考過一年");
+  if (B["休學過"]) sch.push("也休學過");
+  if (sch.length) out.push(sch.join("，") + "。");
+
+  // 工作
+  if (F.firstJob) out.push("第一份工作是" + F.firstJob + "，" +
+    (S.job ? "最後做到" + S.job.t + "。" : (S.retired ? "最後順利退休。" : "最後沒有在做什麼固定的事。")));
+  else if (S.job) out.push("做了很多年的" + S.job.t + "。");
+
+  // 感情
+  const love = [];
+  if (B["結過婚"] || B["登記結婚"]) love.push("結過婚");
+  if (S.exes >= 2) love.push("分開過好幾次");
+  else if (S.exes === 1) love.push("分開過一次");
+  if (B["離過婚"]) love.push("也離過");
+  if (F.widowed) love.push("後來送走了枕邊的人");
+  if (B["出軌過"]) love.push("中間有一段沒跟人說的事");
+  if (F.fakeMarry) love.push("有一段婚姻是為了交代");
+  if (!love.length) love.push(S.partner ? "有一個一直在身邊的人" : "一直是一個人");
+  out.push("感情上，" + love.join("、") + "。");
+
+  // 家人
+  if (S.kids.length){
+    const bond = S.kids.reduce((a,k)=>a+k.bond,0) / S.kids.length;
+    out.push("生了 " + S.kids.length + " 個小孩" +
+      (F.lostKid ? "，送走了其中一個" : "") +
+      (bond > 70 ? "，到最後都還很親。" : bond > 40 ? "，關係平平淡淡。" : "，但後來不太往來了。"));
+  }
+  if (S.sibs.length){
+    const sb = S.sibs[0];
+    out.push("跟" + sb.name + (sb.bond > 60 ? "一直有聯絡。" : sb.bond > 30 ? "偶爾見面。" : "最後幾乎不說話了。"));
+  }
+
+  // 走過的彎路
+  const hard = [];
+  if (B["破產過"]) hard.push("破過產");
+  if (B["借過錢莊"]) hard.push("借過地下錢莊");
+  if (B["回來了"]) hard.push("在很遠的地方困過幾年");
+  if (B["關過"]) hard.push("坐過牢");
+  if (B["在八大待過"]) hard.push("在八大待過");
+  if (B["混過"]) hard.push("混過一陣子");
+  if (F.cancer) hard.push("跟病拔過河");
+  if (B["離開了"] || B["走出來了"]) hard.push("從很糟的關係裡走出來");
+  if (S.conds.indexOf("創傷壓力") >= 0) hard.push("有些事一直沒好");
+  if (hard.length) out.push("路上" + hard.join("、") + "。");
+
+  // 做對的事
+  const good = [];
+  if (B["出櫃了"]) good.push("在某一天把自己說出口");
+  if (B["跟宿敵和解"]) good.push("跟一輩子的對手握了手");
+  if (B["和好了"]) good.push("打了那通遲到很久的電話");
+  if (B["見到了"]) good.push("見到了想見的人");
+  if (B["接棒了"] || B["把球傳下去"]) good.push("把學到的傳給了下一個");
+  if (B["擋下一個人"]) good.push("攔下了一個差點走偏的年輕人");
+  if (B["有站出來"] || B["說出來了"]) good.push("替人站出來過");
+  if (B["金盆洗手"] || B["洗白了"] || B["上岸"]) good.push("自己把自己撈了回來");
+  if (good.length) out.push("也" + good.join("、") + "。");
+
+  out.push("享年 " + S.age + " 歲。" + S.deathReason);
+  return out.join("");
+}
 function showEnd(){
   const v = score(), bs = Object.keys(S.badges);
   $("endScreen").innerHTML =
     '<div class="kicker">AGE '+S.age+' · END</div>'+
     '<h2>'+S.name+'，'+verdict(v)+'</h2>'+
-    '<p class="body">'+S.deathReason+'<br>'+epitaph()+'</p>'+
+    '<p class="body" style="font-size:12px;line-height:1.85">'+retrospect()+'</p>'+
+    '<p class="body" style="opacity:.75;font-size:11.5px">'+epitaph()+'</p>'+
     '<div class="score">'+v+'</div>'+
     '<div class="grid">'+
       row("出身", S.origin.tag) + row("家鄉", S.place.name) +

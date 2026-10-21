@@ -993,6 +993,17 @@ const AUTO = [
   {w:2,when:()=>S.friend&&S.age>=22,t:"跟老朋友喝到半夜，講的還是高中那些事。",e:{mood:9,stress:-10},tone:"good"},
   {w:2,when:()=>S.age>=24&&S.st.luck>70,t:"抽獎抽中了一台家電，運氣真的有差。",e:{mood:7,cash:3},tone:"good"},
   {w:2,when:()=>S.age>=24&&S.st.luck<30,t:"出門踩到狗屎，手機還掉進水溝。",e:{mood:-6,cash:-3},tone:"bad"},
+  // —— 被關著的時候 ——
+  {conf:1,w:4,when:()=>S.trapped>0,t:"今天的業績沒達標，你被罰站了一整夜。",e:{health:-5,mood:-7,stress:10},tone:"bad"},
+  {conf:1,w:3,when:()=>S.trapped>0,t:"隔壁床的人昨天沒有回來，沒有人敢問去哪了。",e:{mood:-9,stress:12},tone:"bad"},
+  {conf:1,w:3,when:()=>S.trapped>0,t:"你在牆上刻了一道。第幾道你已經不想數了。",e:{mood:-6,stress:5},tone:"bad"},
+  {conf:1,w:3,when:()=>S.trapped>0,t:"有人塞了半包菸給你，什麼也沒說。",e:{mood:5,social:3},tone:"good"},
+  {conf:1,w:3,when:()=>S.trapped>0,t:"你夢到家裡的樓梯間，醒來花了很久才想起自己在哪。",e:{mood:-8},tone:"bad"},
+  {conf:1,w:4,when:()=>S.jail>0,t:"放封的時候，可以看到一小塊天空。",e:{mood:4,fit:2}},
+  {conf:1,w:3,when:()=>S.jail>0,t:"你收到一封信，字很醜但寫得很長。",e:{mood:11,stress:-8},tone:"good"},
+  {conf:1,w:3,when:()=>S.jail>0,t:"接見日沒有人來。你在會客室坐了二十分鐘。",e:{mood:-12},tone:"bad"},
+  {conf:1,w:3,when:()=>S.jail>0,t:"同房的人在教你一門手藝。",e:{intel:4,social:4,mood:3}},
+  {conf:1,w:2,when:()=>S.jail>0,t:"你把牙刷柄磨平了，不為什麼，只是手要有事做。",e:{mood:-3,stress:-4}},
   // —— 職業：每種工作遇到的事不一樣 ——
   {w:4,when:()=>jobCat("tech"),t:"專案準時上線，拿到一筆專案獎金。",e:{mood:7,stress:-4},tone:"good",run:()=>money(S.job.pay*0.22)},
   {w:4,when:()=>jobCat("tech"),t:"系統半夜掛掉，你在棉被裡遠端修了三小時。",e:{health:-4,mood:-6,stress:10},tone:"bad"},
@@ -1510,6 +1521,16 @@ const CHOICE = [
       {l:"再做幾年，錢最實在",e:{mood:-6,health:-8,stress:12},g:"",run:()=>{S.job.pay=Math.round(S.job.pay*1.1);getIll("肝指數過高","長期應酬，肝指數紅了一整頁。")}},
       {l:"直接不做了",e:{mood:8,stress:-24},g:"",run:()=>{S.job=null;logit("你把那些衣服全部丟掉。",null,true)}}]},
 
+  {id:"afterNight",w:34,when:()=>S.flags.night&&!inNight()&&!S.job&&!S.retired&&S.age>=34&&S.age<=60&&!S.seen.afterNight,
+   t:"這行做不下去之後",d:"存摺裡的數字看起來還可以，但你知道那撐不了多久。",
+   c:[{l:"用存款開一間小店",e:{mood:12,stress:14},g:"",run:()=>{
+        if(S.money>=150){money(-130);S.job={t:"小店老闆",pay:Math.round(rnd(55,130)),pres:2,cat:"biz",gr:0.8,vol:0.3,years:0};
+          badge("上岸"); logit("你在巷子裡租了一個店面，自己貼的磁磚。","good",true)}
+        else{add("mood",-10);logit("算一算連押金都不夠。","bad")}}},
+      {l:"去考個證照，從頭來過",e:{intel:8,mood:4,stress:16,cash:-40},g:"",run:()=>{
+        const pool=JOBS.filter(j=>jobOK(j)); if(pool.length){takeJob(pick(pool));logit("三十幾歲重新當新人，薪水剩下三分之一。",null,true)}}},
+      {l:"先休息，之後再說",e:{mood:6,stress:-14,cash:-30},g:"",run:()=>{logit("你睡了半年，日夜終於顛倒回來。")}}]},
+
   {id:"nightfam",w:12,when:()=>inNight()&&!S.flags.nightknown&&S.age<=55,
    t:"家裡知道了",d:"媽媽在電話裡沉默了很久，只問了一句「是不是真的」。",
    c:[{l:"承認",e:{mood:-16,social:-8,stress:14},g:"",run:()=>{S.flags.nightknown=true;logit("她哭了。但過年你還是回去了。","bad",true)}},
@@ -1586,14 +1607,14 @@ const CHOICE = [
         else{add("mood",-16);logit("開了十一個月就收了，錢全押在裝潢上。","bad",true)}}},
       {l:"不想管人，繼續做自己的",e:{mood:3,stress:-6},g:"你只想把自己的班上完。"}]},
 
-  {id:"nightold",w:14,when:()=>inNight()&&S.age>=37,
+  {id:"nightold",w:30,when:()=>inNight()&&S.age>=34,
    t:"客人變少了",d:"新來的妹妹二十一歲，你的檯數掉了一半。",
    c:[{l:"砸錢做醫美撐下去",e:{charm:12,mood:4,cash:-120,stress:12},g:"",run:()=>{S.job.pay=Math.round(S.job.pay*1.2)}},
       {l:"轉去做日間的工作",e:{mood:8,stress:-18},g:"",run:()=>{S.job=null;logit("你把那些高跟鞋全部送人了。",null,true)}},
       {l:"喝更多，拚更兇",e:{mood:-8,health:-14,stress:18},g:"",run:()=>{getIll("酒精依賴","你發現自己下班也要喝才睡得著。")}}]},
 
   /* ---------- 成人直播 ---------- */
-  {id:"streamin",w:15,when:()=>!S.flags.stream&&S.age>=20&&S.age<=42&&S.st.charm>=58&&(S.money<40||S.debtKind||inNight()),
+  {id:"streamin",w:15,when:()=>!S.flags.stream&&S.age>=20&&S.age<=38&&S.st.charm>=58&&(S.money<40||S.debtKind||inNight()),
    t:"有人找你開台",d:"抽成很高，而且不用出門。你把房間的燈換成粉紅色，手一直停在開台鍵上。",
    c:[{l:"開成人台",e:{charm:8,mood:-4,stress:16,social:-6},g:"",run:()=>{
         S.flags.stream=true; S.flags.night=true; S.stigma+=2;
@@ -2682,6 +2703,7 @@ const ERA = [
 /* ===================== 里程碑 ===================== */
 function milestone(){
   const a = S.age;
+  if (confined()) return null;
   if (a === 1){
     if (S.st.fit > 62) logit("十個月就會走路了，而且很快變成跑。","good");
     else if (S.st.fit < 35) logit("一歲半還在扶著牆走，媽媽有點擔心。","bad");
@@ -2702,7 +2724,7 @@ function milestone(){
   if (a === 19 && S.flags.redo){ S.flags.redo = false; return exam18(); }
   if (S.path === "uni" && a === (S.uniEnd||22)) return afterUni();
   if ((S.path === "grad" || S.path === "abroad") && a === (S.gradEnd||24)) return afterGrad();
-  if (S.trapped > 0) return null;
+  if (confined()) return null;
   if (a >= 18 && stageKey() === "work" && !S.job && !S.retired) return findJob();
   return null;
 }
@@ -2950,6 +2972,24 @@ function yearlyEconomy(){
     if (S.focus === "摸魚度日" && chance(0.06 + (S.econ<0?0.05:0))){
       logit("被委婉地請走了。","bad",true); S.job = null;
     }
+    // 八大與直播是被年齡推著走的行業：收入會掉，最後會被請出去
+    if (jb.cat === "night"){
+      const boss = jb.t === "店內幹部";
+      const from = boss ? 46 : 35;
+      if (S.age > from){
+        const over = S.age - from;
+        jb.pay = Math.max(36, Math.round(jb.pay * (1 - Math.min(0.26, over * 0.035))));
+        const hardOut = boss ? 60 : (jb.t === "被包養" ? 46 : 52);
+        const p = S.age >= hardOut ? 1 : Math.max(0, (over - 3) * 0.055);
+        if (p > 0 && chance(Math.min(1, p))){
+          S.job = null; add("mood",-12); add("stress",10);
+          logit(S.flags.stream
+            ? "觀眾一年比一年少。某天你開台，線上只有十一個人。"
+            : jb.t === "被包養" ? "他不再轉帳了，訊息也沒有再回。"
+            : "店裡不再排你的班了。幹部說「妹妹，妳該想想以後」。", "bad", true);
+        }
+      }
+    }
   }
   if (k === "retire") money(rnd(18,32));
   if (S.gang > 0 && !S.job && S.jail <= 0) money(rnd(30,80));
@@ -3055,6 +3095,7 @@ function yearlyDrift(){
   S.kids.forEach(k => { if (S.age - k.born > 20) k.bond -= 1; });
 }
 function crisisCheck(){
+  if (confined()) return false;   // 被關著的時候，崩潰有自己的寫法
   if ((S.st.mood <= 3 || S.st.stress >= 97) && !S.flags.burnt){
     S.flags.burnt = true;
     getIll("憂鬱症");
@@ -3101,7 +3142,11 @@ function markFired(id){
   S.flags.cnt[id] = (S.flags.cnt[id] || 0) + 1;
   S.seen[id] = true;
 }
+// 被關著的時候，只有關於「裡面」的事會發生
+const CONFINED = {trapFamily:1, trapBoss:1, trapRescue:1, prison:1};
+const confined = () => S.trapped > 0 || S.jail > 0;
 function drawFrom(pred){
+  if (confined()) pred = (p => e => CONFINED[e.id] && p(e))(pred);
   const pool = CHOICE.filter(e => pred(e) && (!S.seen[e.id] || REPEATABLE[e.id]) && canFire(e) && safe(e.when));
   if (!pool.length) return false;
   const ev = weighted(pool); markFired(ev.id);
@@ -3145,7 +3190,7 @@ function advanceYear(){
   if (m) pending = m;
   else if (!crisisCheck()){
     // 時代衝擊：一輩子最多碰上三次
-    if (S.age >= 14 && (S.flags.eraCount||0) < 3 && chance(0.055)){
+    if (!confined() && S.age >= 14 && (S.flags.eraCount||0) < 3 && chance(0.055)){
       const ep = ERA.filter(e => !S.seen["era_"+e.id] && safe(e.when));
       if (ep.length){
         const ev = weighted(ep);
@@ -3159,7 +3204,7 @@ function advanceYear(){
     const dense = S.age <= 18 ? 0.46 : 0.42;      // 前十八年事件更密
     if (!pending && chance(dense)) drawFrom(e => !CORE[e.id] && !THREAD[e.id]);
     if (!pending && chance(0.55)){
-      const pool = AUTO.filter(e => safe(e.when));
+      const pool = AUTO.filter(e => (!!e.conf === confined()) && safe(e.when));
       if (pool.length){
         const ev = weighted(pool);
         const txt = ev.dt ? ev.dt() : ev.t;

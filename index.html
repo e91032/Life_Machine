@@ -592,6 +592,12 @@ function newState(d){
     orient:d.orient, out:0, trapped:0, trapSite:"",
     hMax: d.sex === "F" ? (chance(.42)?0:chance(.62)?1:2) : (chance(.76)?0:1),
     aRisk: chance(d.sex === "F" ? 0.16 : 0.045),
+    draw: { cancer:chance(.26), dui:chance(.40), whistle:chance(.12), framed:chance(.055),
+            gamble:chance(.17), drug:chance(.09), abuse:chance(.13), stalker:chance(.09),
+            secondfamily:chance(.035), adopted:chance(.04), dadaffair:chance(.065),
+            dnakid:chance(.08), donate:chance(.075), coma:chance(.045), inherit:chance(.30),
+            hui:chance(.14), cancelled:chance(.11), famous:chance(.09),
+            childloss:chance(.045), friendgone:chance(.24) },
     log:[], badges:{}, flags:{}, seen:{}, debtYears:0
   };
 }
@@ -988,7 +994,7 @@ const CHOICE = [
       {l:"專心準備考試",e:{intel:9,mood:-5,stress:12},g:"你把時間全押在書上。"},
       {l:"兩邊都做一點",e:{cash:6,intel:3,health:-4,stress:11},g:"睡眠變成最奢侈的東西。"}]},
 
-  {id:"confess",w:30,when:()=>S.age>=15&&S.age<=30&&single(),
+  {id:"confess",w:52,when:()=>S.age>=15&&S.age<=30&&single(),
    t:"有一個喜歡的人",d:"你們一起走了一學期的回家路，今天他／她好像在等你說什麼。",
    c:[{l:"鼓起勇氣告白",e:{},g:"",run:()=>{
         if (roll((S.st.charm*0.55 + S.st.social*0.3 + 10)/100)){
@@ -999,13 +1005,13 @@ const CHOICE = [
       {l:"維持朋友就好",e:{mood:-4,social:6},g:"你們還是朋友，一直都是。"},
       {l:"裝作什麼都沒發生",e:{mood:-7,intel:2,stress:6},g:"那條路後來你繞道走。"}]},
 
-  {id:"friend",w:14,when:()=>S.age>=13&&S.age<=26&&!S.friend,
+  {id:"friend",w:24,when:()=>S.age>=13&&S.age<=26&&!S.friend,
    t:"有一個人跟你特別聊得來",d:"你們可以講到半夜，隔天還有話講。",
    c:[{l:"認真經營這段友情",e:{social:9,mood:8,stress:-9},g:"",run:()=>{S.friend={name:makeName(pick(["M","F"])),bond:80};badge("有一輩子的朋友");logit("你跟"+S.friend.name+"成了最好的朋友。","good",true)}},
       {l:"保持普通距離",e:{mood:-2,intel:3},g:"你習慣跟人留一點空白。"},
       {l:"忙著做自己的事",e:{intel:6,social:-5},g:"後來你們就只剩按讚的交情。"}]},
 
-  {id:"netdate",w:20,when:()=>single()&&S.age>=22&&S.age<=52,
+  {id:"netdate",w:36,when:()=>single()&&S.age>=22&&S.age<=52,
    t:"配對成功了",d:"聊了三個禮拜，他問要不要出來吃個飯。",
    c:[{l:"赴約",e:{stress:5},g:"",run:()=>{
         if (roll(0.5)){ S.partner=partnerNew(58); add("mood",11); logit("本人比照片自然，你們續攤到十一點。跟"+S.partner.name+"在一起了。","good",true); }
@@ -1014,7 +1020,7 @@ const CHOICE = [
       {l:"再聊久一點",e:{mood:3},g:"",run:()=>{if(chance(0.5))logit("聊著聊著就淡了，最後誰也沒再開口。","bad")}},
       {l:"算了，刪掉",e:{mood:-3,stress:-4},g:"你說這種東西不適合你。"}]},
 
-  {id:"blind",w:20,when:()=>S.age>=25&&S.age<=46&&single(),
+  {id:"blind",w:36,when:()=>S.age>=25&&S.age<=46&&single(),
    t:"長輩要幫你安排相親",d:"阿姨說對方是公務員，人很老實。",
    c:[{l:"去看看",e:{},g:"",run:()=>{
         if (roll(0.55)){ S.partner=partnerNew(55); add("mood",8); logit("意外聊得來，跟"+S.partner.name+"開始交往。","good",true); }
@@ -1023,7 +1029,7 @@ const CHOICE = [
       {l:"推掉，等緣分",e:{mood:3,social:-2},g:"你相信會遇到對的人。"},
       {l:"直接說你不想結婚",e:{mood:6,social:-8,stress:-6},g:"家族群組安靜了很久。",run:()=>{S.flags.nomarry=true}}]},
 
-  {id:"propose",w:48,when:()=>S.partner&&!married()&&S.partner.aff>=46&&S.age>=23,
+  {id:"propose",w:88,when:()=>S.partner&&!married()&&S.partner.aff>=46&&S.age>=23,
    t:"要不要結婚",dyn:()=>"在一起 "+(S.age-S.partner.since)+" 年了，雙方家長開始問「什麼時候」。",
    c:[{l:"求婚",e:{mood:16,cash:-60,social:6},g:"",run:()=>{
         S.partner.married=true; S.partner.aff=Math.min(100,S.partner.aff+12);
@@ -1035,7 +1041,7 @@ const CHOICE = [
         else { S.partner.aff-=20; logit("話說開了，但有什麼東西裂了。","bad"); }
       }}]},
 
-  {id:"kid",w:62,when:()=>married()&&!sameSex()&&S.age>=25&&S.age<=44&&S.kids.length<4,
+  {id:"kid",w:112,when:()=>married()&&!sameSex()&&S.age>=25&&S.age<=44&&S.kids.length<4,
    t:"要生小孩嗎",d:"醫生說身體沒問題，問題只有「要不要」。",
    c:[{l:"生",e:{mood:14,cash:-30,health:-4,stress:12},g:"",run:()=>{
         const k={name:makeName(chance(.5)?"M":"F"),born:S.age,bond:70};
@@ -1197,7 +1203,7 @@ const CHOICE = [
       {l:"說服他留下",e:{mood:-4,stress:8},g:"",run:()=>{S.partner.aff-=18}},
       {l:"讓他先去，你留著",e:{mood:-8,stress:12},g:"",run:()=>{S.partner.aff-=26;logit("太平洋兩邊，時差十五個小時。","bad")}}]},
 
-  {id:"office",w:20,when:()=>atWork()&&single()&&S.age>=23&&S.age<=46,
+  {id:"office",w:36,when:()=>atWork()&&single()&&S.age>=23&&S.age<=46,
    t:"辦公室有人在追你",d:"每天早上你桌上都有一杯咖啡，沒有署名但你知道是誰。",
    c:[{l:"答應看看",e:{mood:8,stress:6},g:"",run:()=>{S.partner=partnerNew(64);logit("跟同事"+S.partner.name+"在一起了，全公司三天內都知道。","good",true)}},
       {l:"婉拒，同事難做",e:{mood:-3,intel:3,social:2},g:"咖啡隔天就沒了。"},
@@ -1494,7 +1500,7 @@ const CHOICE = [
         logit("觀眾少了九成，但你可以用本名了。",null,true)}},
       {l:"再撐兩年",e:{mood:-6,health:-6,stress:14},g:"",run:()=>{S.job.pay=Math.round(S.job.pay*1.1)}}]},
 /* ---------- 性傾向：發現、說出口、組成家庭 ---------- */
-  {id:"realize",w:45,when:()=>S.orient!=="straight"&&!S.flags.realized&&S.age>=13&&S.age<=28,
+  {id:"realize",w:60,when:()=>S.orient!=="straight"&&!S.flags.realized&&S.age>=13&&S.age<=28,
    t:"你好像跟大家不一樣",
    dyn:()=>S.partner ? "大家都在聊喜歡誰，你發現自己心跳的對象，跟他們說的不一樣。"
                      : "大家都在聊喜歡誰。你跟著笑，但心裡那個名字說不出口。",
@@ -1507,7 +1513,7 @@ const CHOICE = [
         S.flags.realized=true;
         logit("你讀了很多別人的故事，第一次覺得沒那麼孤單。","good",true)}}]},
 
-  {id:"comeout",w:34,when:()=>S.flags.realized&&S.orient!=="straight"&&S.out<2&&S.age>=16,
+  {id:"comeout",w:46,when:()=>S.flags.realized&&S.orient!=="straight"&&S.out<2&&S.age>=16,
    t:"要不要說出口",d:"這句話在你喉嚨裡放了好幾年。",
    c:[{l:"跟爸媽說",e:{stress:22},g:"",run:()=>{
         const warm = (S.home.kid!=="失和"?0.12:-0.06) + (S.origin.tag==="書香門第"?0.08:0) + (S.st.luck-50)/300;
@@ -1557,7 +1563,7 @@ const CHOICE = [
       {l:"戴口罩去看",e:{mood:9,stress:-8},g:"你站在人行道上，看了三個小時。"},
       {l:"在家看直播",e:{mood:4},g:"你把音量轉得很小。"}]},
 
-  {id:"samekid",w:26,when:()=>sameSex()&&married()&&S.kids.length<3&&S.age>=27&&S.age<=46,
+  {id:"samekid",w:48,when:()=>sameSex()&&married()&&S.kids.length<3&&S.age>=27&&S.age<=46,
    t:"你們想要一個小孩",d:"這件事對你們來說，比別人多繞好幾圈。",
    c:[{l:"出國做人工生殖",e:{mood:14,cash:-320,stress:24,health:-5},g:"",run:()=>{
         if(roll(0.55)){S.kids.push({name:makeName(chance(.5)?"M":"F"),born:S.age,bond:80});
@@ -1778,6 +1784,281 @@ const CHOICE = [
         else{add("mood",-14);add("social",-8);logit("留言區有人說「誰叫你貪」。","bad",true)}}},
       {l:"匿名、變聲",e:{mood:6,stress:8},g:"你講了四個小時，鏡頭只拍你的手。"},
       {l:"不想再講一次",e:{mood:-5,stress:-6},g:"你把那則訊息封存了。"}]},
+/* ---------- 家裡的秘密 ---------- */
+  {id:"adopted",w:28,when:()=>S.draw.adopted&&S.age>=18&&S.age<=48&&!S.seen.adopted,
+   t:"你在舊箱子裡翻到一份文件",d:"收養同意書。上面的日期是你出生那年。",
+   c:[{l:"當面問爸媽",e:{stress:18,mood:-8},g:"",run:()=>{
+        if(roll(0.6)){add("mood",14);add("stress",-16);logit("媽媽說她等這一天等了三十年。那天晚上你們聊到四點。","good",true)}
+        else{add("mood",-18);add("social",-6);logit("他們說「你是我們養大的就是我們的」，然後再也不提。","bad",true)}}},
+      {l:"自己去找生母",e:{intel:5,stress:22,cash:-30},g:"",run:()=>{
+        if(roll(0.4)){add("mood",10);badge("找到了");logit("她住在三百公里外，有另一個家庭。你們喝了一杯咖啡。","good",true)}
+        else{add("mood",-14);logit("查到最後一條線索斷在一間早就拆掉的醫院。","bad",true)}}},
+      {l:"把文件放回去",e:{mood:-10,stress:14},g:"你把箱子蓋回去，手按了很久。"}]},
+
+  {id:"dadaffair",w:28,when:()=>S.draw.dadaffair&&S.age>=20&&S.age<=50&&!S.flags.parentGone&&!S.seen.dadaffair,
+   t:"你在路上看到爸爸",d:"他牽著一個小孩，那個小孩叫他爸爸。但那不是你弟弟。",
+   c:[{l:"告訴媽媽",e:{mood:-16,stress:22},g:"",run:()=>{
+        if(chance(0.5)){logit("媽媽說她知道很久了。那頓飯她照樣煮了四菜一湯。","bad",true)}
+        else{add("mood",-10);logit("家裡散了。你成了那個說出口的人。","bad",true);money(-80)}}},
+      {l:"直接找爸爸攤牌",e:{mood:-12,stress:20},g:"",run:()=>{
+        if(roll(0.4)){add("mood",6);logit("他哭了，然後開始處理。","good",true)}
+        else{add("mood",-12);logit("他只說「這是大人的事」。你們之後見面都很客氣。","bad",true)}}},
+      {l:"假裝沒看到",e:{mood:-14,stress:18},g:"",run:()=>{logit("那條路你後來都繞著走。","bad")}}]},
+
+  {id:"dnakid",w:34,when:()=>S.draw.dnakid&&married()&&S.kids.length>0&&S.age>=28&&S.age<=62&&!sameSex()&&!S.seen.dnakid,
+   t:"血型對不上",d:"小孩學校的作業要填家族血型，你算了三次。",
+   c:[{l:"去驗",e:{stress:26,cash:-15},g:"",run:()=>{
+        if(chance(0.5)){add("mood",10);add("stress",-20);logit("結果出來是你的。你為自己懷疑過這件事難過了很久。","good",true)}
+        else{add("mood",-26);S.partner.aff-=45;badge("那張報告");
+          logit("不是你的。你在診所外面的停車場坐到天黑。","bad",true)}}},
+      {l:"不驗，日子照過",e:{mood:-10,stress:16},g:"你把那張紙折起來丟了。"},
+      {l:"直接問另一半",e:{stress:22},g:"",run:()=>{
+        if(chance(0.6)){S.partner.aff=Math.min(100,S.partner.aff+10);add("mood",8);logit("她哭著說你怎麼會這樣想。","good")}
+        else{S.partner.aff-=40;add("mood",-22);logit("她沉默太久了，久到你已經知道答案。","bad",true)}}}]},
+
+  /* ---------- 醫療的抉擇 ---------- */
+  {id:"cancer",w:30,when:()=>S.draw.cancer&&S.age>=42&&!S.flags.cancer&&(S.st.health<62||S.age>=58),
+   t:"報告上有一個陰影",d:"醫生把椅子轉過來，說「我們需要再做一次檢查」。",
+   c:[{l:"積極治療，該切就切",e:{health:-14,mood:-10,stress:26,cash:-260,fit:-10},g:"",run:()=>{
+        S.flags.cancer=true;
+        if(roll(0.62)){add("health",26);add("mood",18);badge("熬過來了");
+          logit("化療做了六次，頭髮掉光又長回來。五年後複檢，乾淨。","good",true)}
+        else{add("health",-18);getIll("慢性病");logit("治療有效了一陣子，然後又回來了。","bad",true)}}},
+      {l:"不做化療，顧生活品質",e:{mood:14,stress:-18,health:-16},g:"",run:()=>{
+        S.flags.cancer=true;
+        logit("你把能去的地方都去了一遍，照片拍了很多。",null,true)}},
+      {l:"先不告訴家人",e:{mood:-14,stress:26,health:-10},g:"",run:()=>{
+        S.flags.cancer=true;
+        if(S.partner)S.partner.aff-=15;
+        logit("你一個人去回診，掛號單藏在車上的置物箱。","bad",true)}}]},
+
+  {id:"donate",w:26,when:()=>S.draw.donate&&S.age>=22&&S.age<=58&&!S.seen.donate,
+   t:"只有你配對成功",d:"醫生說是活體捐贈，可以救家人，但你以後要少一顆腎。",
+   c:[{l:"捐",e:{health:-14,fit:-10,mood:20,stress:16,cash:-40},g:"",run:()=>{
+        badge("給出去一塊"); S.kids.forEach(k=>k.bond=Math.min(100,k.bond+12));
+        logit("手術很順利。你們兩個的肚子上各有一道疤。","good",true)}},
+      {l:"再想想（然後就沒有然後）",e:{mood:-22,social:-14,stress:20},g:"",run:()=>{
+        logit("後來家族裡沒有人再主動找你。","bad",true)}},
+      {l:"誠實說你很害怕",e:{mood:-8,social:-5,stress:10},g:"",run:()=>{
+        if(roll(0.5))logit("他說他懂。那句話你記了一輩子。","good");
+        else{add("social",-8);logit("有人說你自私，你沒有反駁。","bad")}}}]},
+
+  {id:"coma",w:26,when:()=>S.draw.coma&&married()&&S.age>=35&&S.age<=72&&!S.seen.coma,
+   t:"醫生說要有心理準備",dyn:()=>S.partner.name+"出了車禍。躺在那裡三個月了，機器一直在響。",
+   c:[{l:"繼續治療，等奇蹟",e:{mood:-14,stress:28,cash:-300},g:"",run:()=>{
+        if(roll(0.25)){add("mood",26);S.partner.aff=Math.min(100,S.partner.aff+20);badge("等到了");
+          logit("第七個月，他的手指動了一下。","good",true)}
+        else{add("mood",-12);logit("你每天下班都去，講三十分鐘的話給他聽。","bad",true)}}},
+      {l:"簽下放棄急救",e:{mood:-30,stress:-10},g:"",run:()=>{
+        const n=S.partner.name; S.partner=null; S.flags.widowed=true;
+        add("mood",-10); badge("做了最難的決定");
+        logit("你簽名的時候，筆在紙上停了很久。"+n+"走得很安靜。","bad",true)}},
+      {l:"把他接回家自己照顧",e:{mood:-10,health:-14,stress:30,cash:-150},g:"",run:()=>{
+        if(S.job){S.job=null;logit("你辭掉工作，把客廳改成病房。",null,true)}}}]},
+
+  {id:"dnr",w:16,when:()=>S.age>=72&&!S.seen.dnr,
+   t:"醫院問你要不要簽",d:"預立醫療決定書。護理師說很多人都會先簽起來放。",
+   c:[{l:"簽，不要急救",e:{mood:10,stress:-16},g:"",run:()=>{S.flags.dnr=true;badge("自己決定了最後一段")}},
+      {l:"不簽，能救就救",e:{mood:4,stress:6},g:"你說你還想多看幾年。"},
+      {l:"先跟小孩討論",e:{mood:8,social:4},g:"",run:()=>{S.kids.forEach(k=>k.bond=Math.min(100,k.bond+10));S.flags.dnr=true}}]},
+
+  /* ---------- 意外與法律 ---------- */
+  {id:"dui",w:26,when:()=>S.draw.dui&&S.age>=20&&S.age<=65&&!S.record&&!S.seen.dui,
+   t:"你喝了，但只有三公里",d:"代駕要等四十分鐘，你的車就停在對面。",
+   c:[{l:"叫代駕，等",e:{mood:-3,cash:-2,intel:3},g:"你在便利商店坐了四十分鐘。"},
+      {l:"自己開",e:{stress:16},g:"",run:()=>{
+        const d=Math.random();
+        if(d<0.62)logit("平安到家。你那晚睡得很好，後來才知道有多險。");
+        else if(d<0.90){money(-rnd(60,150));S.record=true;add("mood",-18);badge("酒駕前科");
+          logit("被攔下來。吊照、罰款、名字上了公布欄。","bad",true)}
+        else if(d<0.97){money(-rnd(100,260));add("health",-14);getIll("舊傷");S.record=true;add("mood",-24);
+          logit("你擦撞了一台機車。對方躺了四個月，你賠到脫一層皮。","bad",true)}
+        else{S.jail=ri(2,6);S.job=null;S.record=true;add("mood",-40);S.flags.killed=true;badge("撞死了人");
+          logit("對方騎機車，三十四歲。你這輩子都不會忘記那個聲音。","bad",true)}}},
+      {l:"車丟著，明天再來牽",e:{mood:2,cash:-3},g:"隔天早上你去牽車，多繳了停車費。"}]},
+
+  {id:"whistle",w:26,when:()=>S.draw.whistle&&atWork()&&S.age>=26&&S.age<=58&&S.job.pres>=2&&!S.seen.whistle,
+   t:"你發現帳是假的",d:"數字對不起來，而且不是一天兩天了。",
+   c:[{l:"檢舉",e:{mood:10,stress:28},g:"",run:()=>{
+        badge("吹哨者");
+        if(roll(0.45)){money(rnd(50,200));add("social",8);logit("案子成立，你拿到了檢舉獎金。但這行沒有人敢再用你。","good",true)}
+        else{S.job=null;add("mood",-16);logit("調查不了了之，被處理掉的是你。","bad",true)}}},
+      {l:"裝作沒看到",e:{mood:-10,stress:16},g:"",run:()=>{
+        if(chance(0.3)){S.job=null;add("mood",-14);logit("兩年後東窗事發，整個部門都被牽連。","bad",true)}}},
+      {l:"自己先離職再說",e:{mood:2,stress:-8},g:"",run:()=>{S.job=null;logit("你把電腦清乾淨，交接得很漂亮。",null,true)}}]},
+
+  {id:"framed",w:26,when:()=>S.draw.framed&&atWork()&&S.age>=28&&S.age<=60&&!S.record&&!S.seen.framed,
+   t:"公司說錢是你拿的",d:"你的名字在那份簽核單上，但那不是你簽的。",
+   c:[{l:"請律師，打到底",e:{stress:30,cash:-180,mood:-10},g:"",run:()=>{
+        if(roll(0.55)){add("mood",24);add("social",6);badge("洗刷了");logit("兩年後無罪確定。你把判決書影印了十份。","good",true)}
+        else{S.jail=ri(1,3);S.record=true;S.job=null;add("mood",-30);logit("你進去了，為了一件你沒做的事。","bad",true)}}},
+      {l:"和解，認了算了",e:{mood:-20,cash:-120,stress:-10},g:"",run:()=>{S.job=null;logit("你賠了錢，換一份「不起訴」。履歷上那一段從此空白。","bad",true)}},
+      {l:"把真正做的人找出來",e:{intel:6,stress:26},g:"",run:()=>{
+        if(roll((S.st.intel+S.st.social)/230)){add("mood",22);badge("查出來了");logit("你把三年的簽核紀錄全部調出來比對。那個人現在在裡面。","good",true)}
+        else{add("mood",-16);logit("證據被銷毀得很乾淨。","bad",true)}}}]},
+
+  /* ---------- 成癮 ---------- */
+  {id:"gamble",w:26,when:()=>S.draw.gamble&&S.age>=22&&!ill("賭癮")&&!S.seen.gamble,
+   t:"朋友帶你去了一個地方",d:"第一晚你贏了八萬，手一直在抖。",
+   c:[{l:"再去幾次",e:{mood:8,stress:10},g:"",run:()=>{
+        if(roll(0.35)){money(rnd(40,160));logit("你見好就收，而且真的沒有再去。","good")}
+        else{getIll("賭癮","你開始算著下一次什麼時候能去。");money(-rnd(60,200));logit("一個月後，贏的全部吐回去還不夠。","bad",true)}}},
+      {l:"把贏的錢拿去還債",e:{mood:6,cash:8},g:"",run:()=>{money(50)}},
+      {l:"再也不去",e:{intel:4,mood:2},g:"你把那個群組退掉了。"}]},
+
+  {id:"quitgamble",w:24,when:()=>ill("賭癮")&&!S.seen.quitgamble,
+   t:"家裡發現了",d:"存摺被翻出來，數字難看到你自己都不敢看。",
+   c:[{l:"去戒賭團體",e:{mood:10,stress:-16,cash:-20},g:"",run:()=>{
+        if(roll(0.55)){cureIll("賭癮");badge("戒掉了");logit("第一年很難。第二年你開始幫別人做輔導。","good",true)}
+        else logit("你去了三次就沒再去。","bad")}},
+      {l:"把帳戶交給家人管",e:{mood:-6,stress:-12},g:"",run:()=>{if(roll(0.45))cureIll("賭癮")}},
+      {l:"保證不會再有下一次",e:{mood:4,stress:8},g:"",run:()=>{if(S.partner)S.partner.aff-=18}}]},
+
+  {id:"drug",w:22,when:()=>S.draw.drug&&heavy()&&S.age>=18&&!ill("藥癮")&&(S.st.stress>66||inNight()||inGang())&&!S.seen.drug,
+   t:"有人遞了東西過來",d:"他說只是幫你撐過今天。",
+   c:[{l:"接過來",e:{mood:14,stress:-24},g:"",run:()=>{
+        if(roll(0.3))logit("那一晚很輕鬆。你後來沒有再碰。");
+        else{getIll("藥癮","你開始需要它才能上班。");logit("三個月後，你發現自己在算還剩多少。","bad",true)}}},
+      {l:"推開他的手",e:{intel:4,mood:-4,stress:8},g:"你走出去抽完了一整包菸。"},
+      {l:"直接離開那個圈子",e:{social:-10,mood:6,stress:-12},g:"",run:()=>{if(inNight()&&chance(0.4)){S.job=null;logit("你連工作一起辭了。",null,true)}}}]},
+
+  {id:"rehab",w:26,when:()=>ill("藥癮")&&!S.seen.rehab,
+   t:"你知道自己不對勁了",d:"手抖、睡不著、工作做不完。你在鏡子前面站了很久。",
+   c:[{l:"去醫院，走勒戒療程",e:{health:10,mood:8,stress:-20,cash:-90},g:"",run:()=>{
+        if(roll(0.55)){cureIll("藥癮");badge("戒掉了");logit("第四個月，你第一次整夜睡著。","good",true)}
+        else logit("戒斷太難受了，你中途跑了。","bad")}},
+      {l:"自己慢慢減量",e:{health:-6,stress:12},g:"",run:()=>{if(roll(0.3))cureIll("藥癮")}},
+      {l:"繼續用",e:{mood:6,health:-12,stress:-8},g:"",run:()=>{
+        if(chance(0.25)){S.record=true;S.jail=ri(1,2);S.job=null;logit("臨檢的時候，你被帶走了。","bad",true)}}}]},
+
+  /* ---------- 情感的極端 ---------- */
+  {id:"abuse",w:26,when:()=>S.draw.abuse&&heavy()&&S.partner&&S.age>=20&&S.age<=60&&!S.seen.abuse,
+   t:"第一次動手之後，他跪下來道歉",d:"他說他只是太在乎，以後絕對不會了。",
+   c:[{l:"立刻離開，聲請保護令",e:{mood:-10,stress:24,cash:-30},g:"",run:()=>{
+        const n=S.partner.name; S.partner=null; S.exes++;
+        getIll("創傷壓力","你有一陣子聽到關門聲就會發抖。");
+        badge("走出來了"); add("mood",12);
+        logit("你拿到了保護令，搬到他不知道的地方。","good",true)}},
+      {l:"相信他這一次",e:{mood:-12,stress:22,health:-10},g:"",run:()=>{
+        S.flags.abused=true; S.partner.aff-=10;
+        logit("接下來兩年，道歉的話你聽了十一次。","bad",true)}},
+      {l:"告訴家人跟朋友",e:{mood:4,social:5,stress:14},g:"",run:()=>{
+        S.flags.abused=true;
+        if(roll(0.55)){const n=S.partner.name;S.partner=null;S.exes++;add("mood",10);
+          logit("哥哥開車來載你，連行李都沒讓你自己提。","good",true)}
+        else logit("有人說「夫妻吵架哪有不打的」。","bad")}}]},
+
+  {id:"abuseOut",w:52,when:()=>heavy()&&S.flags.abused&&S.partner,
+   t:"這次送了急診",d:"護理師把門關上，小聲問你需不需要幫忙。",
+   c:[{l:"點頭",e:{stress:20},g:"",run:()=>{
+        S.partner=null; S.exes++; S.flags.abused=false;
+        getIll("創傷壓力","你花了很久才敢再相信一個人。");
+        badge("離開了"); add("mood",16);
+        logit("社工當天就安排了庇護所。","good",true)}},
+      {l:"說是自己跌倒的",e:{mood:-16,stress:22,health:-8},g:"",run:()=>{
+        if(chance(0.12)){die("那一次沒有能夠再出院。")}
+        else logit("你照著他教的講法講了一遍。","bad",true)}},
+      {l:"自己偷偷準備，先存錢",e:{intel:5,mood:4,stress:18},g:"",run:()=>{
+        if (S.flags.escapePlan){ S.partner=null; S.exes++; S.flags.abused=false;
+          getIll("創傷壓力","你花了很久才敢再相信一個人。");
+          badge("離開了"); add("mood",18);
+          logit("袋子準備好的那天早上，你在他出門後十分鐘就走了。","good",true); }
+        else { S.flags.escapePlan=true; logit("你在公司的櫃子裡放了一個袋子。"); }}}]},
+
+  {id:"stalker",w:24,when:()=>S.draw.stalker&&heavy()&&S.exes>=1&&S.age>=19&&S.age<=55&&!S.seen.stalker,
+   t:"他每天都在你家樓下",d:"訊息一天四十幾則，你封鎖一個他就開一個。",
+   c:[{l:"報警、聲請保護令",e:{stress:20,mood:4,cash:-20},g:"",run:()=>{
+        if(roll(0.6)){add("mood",12);logit("保護令下來以後他消失了。","good",true)}
+        else{add("mood",-14);getIll("創傷壓力","你有半年不敢一個人走夜路。");logit("警察說「他又沒做什麼」。","bad",true)}}},
+      {l:"搬家、換號碼",e:{mood:-6,cash:-70,social:-6,stress:14},g:"",run:()=>{S.place=wpick(PLACES);logit("你搬到了"+S.place.name+"，沒有跟任何人說。",null,true)}},
+      {l:"約出來講清楚",e:{stress:22},g:"",run:()=>{
+        if(roll(0.35))logit("他哭了很久，然後真的沒有再出現。","good");
+        else{add("health",-14);add("mood",-16);getIll("創傷壓力","那天之後你換了三次鎖。");logit("那次見面之後，情況變得更糟。","bad",true)}}}]},
+
+  {id:"secondfamily",w:28,when:()=>S.draw.secondfamily&&married()&&S.age>=34&&S.age<=65&&!S.seen.secondfamily,
+   t:"有人在社群上標記了你的另一半",dyn:()=>"照片裡"+S.partner.name+"抱著一個小孩，旁邊站著一個你不認識的人。發文的人說「我們結婚十二年了」。",
+   c:[{l:"蒐證，告重婚",e:{mood:-24,stress:30,cash:-120},g:"",run:()=>{
+        if(roll(0.6)){money(rnd(150,500));logit("判決下來，你拿到了該拿的。但那十幾年回不來。","good",true)}
+        else logit("程序走了很久，最後只是離婚。","bad",true);
+        divorce()}},
+      {l:"直接離婚，不想再牽扯",e:{mood:-20,stress:-8},g:"",run:()=>divorce()},
+      {l:"跟另一邊的人見面",e:{mood:-14,stress:24,social:6},g:"",run:()=>{
+        if(!S.friend)S.friend={name:makeName(S.sex),bond:70};
+        badge("最奇怪的朋友");
+        logit("你們在咖啡廳坐了三個小時，最後一起罵了同一個人。",null,true);
+        divorce()}}]},
+
+  /* ---------- 名聲 ---------- */
+  {id:"cancelled",w:24,when:()=>S.draw.cancelled&&S.age>=18&&S.age<=65&&!S.seen.cancelled,
+   t:"你的一句話被截圖了",d:"原本的前後文沒有人看，轉發已經破萬。",
+   c:[{l:"立刻道歉",e:{mood:-12,charm:-5,stress:22},g:"",run:()=>{
+        if(roll(0.5))logit("三天後就沒人記得了。","good");
+        else{add("social",-14);if(S.job)S.job=null;logit("公司發了聲明，然後請你走。","bad",true)}}},
+      {l:"把前後文完整貼出來",e:{intel:5,stress:18},g:"",run:()=>{
+        if(roll(0.5)){add("social",8);add("charm",5);logit("風向整個翻過來，很多人跑來道歉。","good",true)}
+        else{add("mood",-16);logit("沒有人想看完整版。","bad")}}},
+      {l:"全部關掉，消失一陣子",e:{mood:-8,social:-10,stress:-10},g:"你刪掉了所有帳號。"}]},
+
+  {id:"famous",w:22,when:()=>S.draw.famous&&S.age>=18&&S.st.charm>62&&!S.seen.famous,
+   t:"你做的某件事被看見了",d:"一夜之間，你的名字出現在很多人的手機裡。",
+   c:[{l:"把握機會，接案接到爆",e:{mood:12,charm:8,stress:24,health:-6},g:"",run:()=>{
+        money(rnd(80,400));
+        if(chance(0.4))logit("熱度退得比來得還快。","bad");else{badge("紅過一次");logit("你撐住了，變成真的有名。","good",true)}}},
+      {l:"低調處理，過回原本的生活",e:{mood:6,stress:-8},g:"",run:()=>{money(rnd(10,60))}},
+      {l:"趁現在把想講的話講出來",e:{social:9,charm:5,stress:16},g:"",run:()=>{
+        if(roll(0.5)){add("mood",14);badge("說了該說的話");logit("你用那波聲量做了一件有意義的事。","good",true)}
+        else{add("social",-10);logit("你講得太急，被斷章取義。","bad")}}}]},
+
+  /* ---------- 錢的風暴 ---------- */
+  {id:"inherit",w:26,when:()=>S.draw.inherit&&S.age>=38&&S.flags.parentGone&&!S.seen.inherit,
+   t:"兄弟姊妹為了房子翻臉",d:"告別式才過三個月，大家在律師樓裡吵了起來。",
+   c:[{l:"爭到底",e:{mood:-14,stress:26,social:-16,cash:-40},g:"",run:()=>{
+        if(roll(0.5)){money(rnd(200,700));badge("爭到了");logit("你拿到了那間房，但過年只剩你一個人回去。","bad",true)}
+        else{add("mood",-16);logit("打了四年，律師費比分到的還多。","bad",true)}}},
+      {l:"讓出去，保住感情",e:{mood:8,social:10,stress:-14},g:"",run:()=>{money(rnd(20,80));badge("讓了那間房")}},
+      {l:"提議全部賣掉均分",e:{intel:5,stress:12},g:"",run:()=>{
+        if(roll(0.6)){money(rnd(120,400));add("social",5);logit("房子賣了，大家各拿一份，關係勉強保住。","good",true)}
+        else{add("social",-10);money(rnd(60,200));logit("有人覺得你急著變現。","bad")}}}]},
+
+  {id:"hui",w:24,when:()=>S.draw.hui&&S.age>=28&&S.age<=62&&S.money>60&&!S.seen.hui,
+   t:"會頭跑了",d:"跟了六年的互助會，昨天還在群組裡發早安圖。",
+   c:[{l:"跟其他會員一起提告",e:{social:6,stress:20,cash:-25},g:"",run:()=>{
+        const lost=Math.min(Math.max(S.money,0)*0.4,300); money(-lost);
+        if(roll(0.35)){money(lost*0.5);logit("追回了一部分，花了三年。","good",true)}
+        else logit("人找到了，錢早就沒了。","bad",true)}},
+      {l:"自認倒楣",e:{mood:-14,stress:-6},g:"",run:()=>{money(-Math.min(Math.max(S.money,0)*0.4,300))}},
+      {l:"去把會頭家人堵起來",e:{mood:-8,social:-8,stress:18},g:"",run:()=>{
+        money(-Math.min(Math.max(S.money,0)*0.35,280));
+        if(chance(0.2)){S.record=true;add("mood",-14);logit("你被反告恐嚇，留下了紀錄。","bad",true)}
+        else logit("他媽媽跪在地上，你什麼也要不到。","bad")}}]},
+
+  /* ---------- 失去 ---------- */
+  {id:"childloss",w:16,when:()=>S.draw.childloss&&heavy()&&kidAged(1,30)&&!S.seen.childloss,
+   t:"醫院打電話來",d:"你趕過去的時候，走廊很亮，但你什麼都看不清楚。",
+   c:[{l:"撐住，因為還有別人要顧",e:{mood:-34,stress:30,health:-10},g:"",run:()=>{
+        loseAKid(); getIll("創傷壓力","那個房間你三年沒有進去過。");
+        logit("你照常煮飯、照常上班。只是再也沒有大聲笑過。","bad",true)}},
+      {l:"跟另一半一起去做悲傷輔導",e:{mood:-26,stress:14,cash:-50},g:"",run:()=>{
+        loseAKid(); getIll("創傷壓力","那個房間你三年沒有進去過。");
+        if(S.partner){S.partner.aff=Math.min(100,S.partner.aff+16);add("mood",10);
+          logit("你們學會在對方哭的時候不說話，只是坐著。","good",true)}
+        else logit("團體裡有六個人，每個人都少了一個。",null,true)}},
+      {l:"把自己埋進工作裡",e:{mood:-30,stress:26,cash:40},g:"",run:()=>{
+        loseAKid(); getIll("創傷壓力","那個房間你三年沒有進去過。");
+        if(S.partner)S.partner.aff-=22;
+        logit("你開始接所有人都不想接的班。","bad",true)}}]},
+
+  {id:"friendgone",w:22,when:()=>S.draw.friendgone&&heavy()&&S.friend&&S.age>=22&&!S.seen.friendgone,
+   t:"他走了",dyn:()=>S.friend.name+"走了。前一週你們還在約什麼時候吃飯，你回了「再說」。",
+   c:[{l:"去陪他的家人",e:{mood:-16,social:6,stress:16},g:"",run:()=>{
+        S.friend=null; badge("送了朋友最後一程");
+        logit("你幫忙招呼了三天的客人，回家才哭出來。","bad",true)}},
+      {l:"一個人消化",e:{mood:-24,stress:22},g:"",run:()=>{
+        S.friend=null; getIll("創傷壓力","你有很長一段時間不敢看他的頭像。");
+        logit("你把你們的對話從頭看到尾。","bad",true)}},
+      {l:"打給其他好久沒聯絡的人",e:{mood:-10,social:10,stress:-8},g:"",run:()=>{
+        S.friend=null; badge("那天之後常打電話");
+        logit("你那天打了七通電話，每一通都講很久。","good",true)}}]},
 
   /* ---------- 道上 ---------- */
   {id:"gangin",w:26,when:()=>S.gang===0&&!S.record&&S.age>=15&&S.age<=26&&S.st.fit>=52&&(S.flags.voc||S.school==="後段高中"||S.school==="社區高中"||S.money<25),
@@ -2001,6 +2282,15 @@ function findJob(){
   return {t:"找工作",d:mood,c:opts};
 }
 
+function loseAKid(){
+  if (!S.kids.length) return;
+  let idx = 0, best = 99;
+  S.kids.forEach((k,i) => { const a = S.age - k.born; if (a >= 1 && a < best){ best = a; idx = i; } });
+  const k = S.kids.splice(idx,1)[0];
+  S.flags.lostKid = (S.flags.lostKid||0) + 1;
+  badge("送走了孩子");
+  logit(k.name+"走的時候 "+best+" 歲。", "bad", true);
+}
 function freeFromTrap(text, tone){
   S.trapped = 0; S.job = null; S.flags.wasTrapped = true; S.flags.sos = 0;
   badge("回來了");
@@ -2165,6 +2455,8 @@ function yearlyDrift(){
   if (ill("憂鬱症")) { add("mood",-5); add("social",-1.5); }
   if (ill("肝指數過高")) { add("health",-2.6); add("charm",-0.8); }
   if (ill("酒精依賴")) { add("health",-3); add("mood",-3); add("intel",-1); }
+  if (ill("賭癮")) { money(-Math.max(Math.abs(S.money)*0.12, 25)); add("mood",-3); add("stress",6); }
+  if (ill("藥癮")) { add("health",-5); add("mood",-2); add("intel",-1.5); money(-30); }
   if (ill("創傷壓力")) {
     add("mood",-5); add("stress",6); add("social",-1.5);
     if (S.partner) S.partner.aff -= 1.5;
@@ -2246,6 +2538,7 @@ const REPEATABLE = {invest:1,scam:1,affair:1,bully:1,picky:1,ex:1,lotto:1,moveci
   affair:1,exposed:1,loverpush:1,loverend:1,loanshark:1,collect:1,bankrupt:1,nightkeep:1,sugar:1,gangup:1,gangwash:1,afterjail:1,
   raid:1,nightpregF:1,nightpregM:1,nightlove:1,nightold:1,streamviral:1,streamstalk:1,streamout:1,
   comeout:1,pride:1,outwork:1,samekid:1,bidoubt:1,realize:1,
+  abuseOut:1,quitgamble:1,rehab:1,cancelled:1,hui:1,dui:1,
   harassWork:1,harassOut:1,nightharass:1,therapy:1,witness:1,
   trapFamily:1,trapRescue:1,trapBoss:1};
 
@@ -2308,6 +2601,8 @@ function score(){
   if (S.job) v += S.job.pres*9;
   v += DEG[S.degree]*12 + S.age*1.2 + Object.keys(S.badges).length*10;
   if (S.badges["回來了"]) v += 30;
+  if (S.flags.lostKid) v -= 20;
+  if (S.flags.killed) v -= 35;
   if (S.flags.becameOne) v -= 40;
   v -= S.exes*14 + S.conds.length*8 + (S.record?45:0) + (S.flags.bankrupt?30:0) + S.gang*18 + (S.flags.leaked?25:0);
   if (S.money < 0) v += S.money/18;
@@ -2344,6 +2639,12 @@ function epitaph(){
   if (S.badges["出櫃了"]) b.push("最後是以自己的樣子活著");
   if (S.badges["走出來了"]) b.push("花了很久，但走出來了");
   if (S.badges["回來了"]) b.push("回得來就很好了");
+  if (S.flags.lostKid) b.push("白髮人送了黑髮人");
+  if (S.badges["熬過來了"]) b.push("跟病拔過河，而且贏了");
+  if (S.badges["給出去一塊"]) b.push("身上少了一塊，救了一個人");
+  if (S.badges["吹哨者"]) b.push("說過一次實話，代價很大");
+  if (S.flags.killed) b.push("有一個名字跟了你一輩子");
+  if (S.badges["離開了"] || S.badges["走出來了"]) b.push("最後把自己撈了回來");
   if (S.badges["沒有自己先走"]) b.push("走的時候帶著別人");
   if (S.flags.becameOne) b.push("有一段日子站在了另一邊");
   if (S.badges["說出來了"] || S.badges["我也是"]) b.push("曾經替自己說過話");

@@ -1122,6 +1122,10 @@ function partnerNew(aff, forced){
   return {name:makeName(ps),sex:ps,aff:aff,married:false,since:S.age,cheated:false};
 }
 const sameSex = () => !!(S.partner && S.partner.sex === S.sex);
+// 追求的對象跟著你的取向走，文案也跟著換
+const tgtSex = () => likedSex();
+const tgtWord = sx => sx === "M" ? "男生" : "女生";
+const tgtHe = sx => sx === "M" ? "他" : "她";
 const sib = () => S.sibs.length ? S.sibs[0] : null;
 const sibName = () => { const b = sib(); return b ? (b.older ? (b.sex==="M"?"哥哥":"姊姊") : (b.sex==="M"?"弟弟":"妹妹")) + b.name : "手足"; };
 // 取出在某個年齡區間的小孩，讓劇情可以點名道姓
@@ -1313,6 +1317,134 @@ const CHOICE = [
       }},
       {l:"保持距離",e:{mood:-5,intel:3},g:"你換了午餐時間。"},
       {l:"回家好好談",e:{mood:7,stress:-9},g:"",run:()=>{S.partner.aff=Math.min(100,S.partner.aff+14);logit("你們聊了一整晚，像剛認識的時候。","good")}}]},
+
+/* ---------- 捉姦：你捉人，或是被捉 ---------- */
+  {id:"suspect",w:28,when:()=>married()&&!S.flags.spouseLover&&!S.flags.cleared&&S.age>=26&&S.partner.aff<74,
+   t:"你開始覺得不對勁",
+   dyn:()=>S.partner.name+"最近洗澡會把手機帶進去，回家的時間也變得很規律——規律到像是算過的。",
+   c:[{l:"裝沒事，自己觀察",e:{intel:5,stress:18,mood:-8},g:"",run:()=>{
+        if(roll(0.55)){S.flags.spouseLover=makeName(chance(.5)?"M":"F");S.flags.piDate=true;
+          logit("三個月後你拼出了一個名字，還有一間汽車旅館的收據。","bad",true)}
+        else{S.flags.cleared=true;add("mood",6);logit("你查了三個月，什麼都沒有。那三個月你很不好過。")}}},
+      {l:"請徵信社",e:{stress:20,cash:-90},g:"",run:()=>{
+        S.flags.pi=true;
+        if(roll(0.6)){S.flags.spouseLover=makeName(chance(.5)?"M":"F");S.flags.piDate=true;
+          logit("報告厚厚一疊，照片上有日期跟時間。","bad",true)}
+        else{S.flags.cleared=true;add("mood",-4);
+          logit("徵信社說沒有異常。九萬塊換一句「可能是你想太多」。")}}},
+      {l:"直接問",e:{stress:14},g:"",run:()=>{
+        if(roll(0.35)){S.flags.spouseLover=makeName(chance(.5)?"M":"F");S.partner.aff-=30;
+          logit(S.partner.name+"沉默了很久，然後說「對，有一個人」。","bad",true)}
+        else{S.partner.aff-=12;add("mood",-8);
+          logit("對方發了很大的脾氣，說你不信任。這件事變成之後每次吵架的引子。","bad")}}}]},
+
+  {id:"catchScene",w:60,when:()=>S.flags.spouseLover&&S.flags.piDate,
+   t:"你站在那扇門前面",
+   dyn:()=>"地址、時間、房號都在手上。裡面的燈是開的。",
+   c:[{l:"用力敲門，當場攤牌",e:{stress:30,mood:-24},g:"",run:()=>{
+        S.flags.piDate=false; S.flags.caught=true;
+        add("social",-6);
+        logit("走廊上吵到有人報警。那一幕你每次閉上眼睛都還看得到。","bad",true)}},
+      {l:"冷靜錄影，先蒐證",e:{intel:8,stress:24,mood:-18},g:"",run:()=>{
+        S.flags.piDate=false; S.flags.caught=true; S.flags.evidence=true;
+        logit("你在車上錄完整段，手一直在抖，但你把檔案備份了三份。","bad",true)}},
+      {l:"轉身離開",e:{mood:-22,stress:20,intel:4},g:"",run:()=>{
+        S.flags.piDate=false;
+        logit("你在停車場坐到天亮，然後照常去上班。","bad",true)}}]},
+
+  {id:"sueRight",w:56,when:()=>(S.flags.caught||S.flags.spouseLover)&&married(),
+   t:"律師說通姦早就除罪了",
+   dyn:()=>"但你可以告「侵害配偶權」，對"+S.partner.name+"跟那個人一起求償。",
+   c:[{l:"兩個都告，而且離婚",e:{stress:26,cash:-60,mood:-14},g:"",run:()=>{
+        const win = roll(S.flags.evidence ? 0.78 : 0.45);
+        if(win){money(rnd(30,120));badge("告贏了");logit("判賠下來了。數字不大，但那張紙你收著。","good",true)}
+        else logit("證據不足，法官說感覺不能當證據。","bad",true);
+        S.flags.caught=false; S.flags.spouseLover=null; divorce()}},
+      {l:"只告第三者，婚姻再說",e:{stress:22,cash:-40,mood:-10},g:"",run:()=>{
+        S.flags.caught=false; S.flags.spouseLover=null; S.flags.scar=true;
+        if(roll(S.flags.evidence?0.7:0.4)){money(rnd(20,80));logit("對方和解了。但"+S.partner.name+"說你讓他很難堪。","bad",true)}
+        else logit("對方請了律師，反過來說你騷擾。","bad",true);
+        S.partner.aff-=20}},
+      {l:"不告，談條件離婚",e:{stress:-10,mood:-12},g:"",run:()=>{
+        money(rnd(40,200)); S.flags.caught=false; S.flags.spouseLover=null;
+        badge("好聚好散"); logit("房子過到你名下，小孩歸你。你們在律師樓握了手。",null,true);
+        divorce()}},
+      {l:"原諒，試著修補",e:{mood:-16,stress:24},g:"",run:()=>{
+        S.flags.caught=false; S.flags.spouseLover=null; S.partner.aff=Math.max(25,S.partner.aff);
+        S.flags.scar=true; logit("你們去做了諮商。有些事回不去，但日子還在過。",null,true)}}]},
+
+  {id:"kidSaw",w:40,when:()=>(S.flags.caught||S.flags.spouseLover)&&kidIn(5,20),
+   t:"小孩也在場",
+   dyn:()=>{const k=kidIn(5,20);return k.name+"那天跟著你去了。你沒想到會變成那樣。";},
+   c:[{l:"當晚好好跟他解釋",e:{mood:8,stress:16},g:"",run:()=>{
+        const k=kidIn(5,20); if(k)k.bond=Math.min(100,k.bond+12);
+        badge("沒有讓他自己猜"); logit("你說大人的錯不是他的錯。他點點頭，但哭了很久。","bad",true)}},
+      {l:"叫他不要跟任何人說",e:{mood:-12,stress:18},g:"",run:()=>{
+        const k=kidIn(5,20); if(k)k.bond-=20;
+        logit("那件事變成家裡不能提的東西，一提就安靜。","bad",true)}},
+      {l:"要他選邊站",e:{mood:-16,stress:20},g:"",run:()=>{
+        S.kids.forEach(k=>k.bond-=26); logit("小孩後來兩邊都不太親。","bad",true)}}]},
+
+  /* ---------- 這次是你被捉 ---------- */
+  {id:"caughtBed",w:50,when:()=>S.lover&&S.lover.risk>=45&&married(),
+   t:"門被打開了",
+   dyn:()=>S.partner.name+"站在門口。後面還跟著兩個人，其中一個拿著手機在錄。",
+   c:[{l:"什麼都不說，穿好衣服走出去",e:{mood:-26,stress:30},g:"",run:()=>{
+        S.lover=null; S.flags.beenCaught=true;
+        logit("你在樓下站了很久，才發現自己沒有地方可以去。","bad",true)}},
+      {l:"當場下跪求她原諒",e:{mood:-24,stress:28,charm:-5},g:"",run:()=>{
+        S.lover=null; S.flags.beenCaught=true;
+        if(roll(0.2)){S.partner.aff=Math.max(20,S.partner.aff-50);S.flags.scar=true;
+          logit("她沒有說話。三個月後你們還在同一個屋簷下，但她睡客房。","bad",true)}
+        else{add("social",-10);logit("她把錄影傳給了你爸媽跟你主管。","bad",true);divorce()}}},
+      {l:"反過來指責她監視你",e:{mood:-20,stress:26,social:-16},g:"",run:()=>{
+        S.lover=null; S.flags.beenCaught=true; S.flags.blamedBack=true;
+        logit("那句話後來被錄下來，在法庭上播了一次。","bad",true); divorce()}}]},
+
+  {id:"beSued",w:52,when:()=>S.flags.beenCaught,
+   t:"你收到了存證信函",d:"侵害配偶權，求償一百二十萬。對方的律師寫得很客氣。",
+   c:[{l:"找律師談和解",e:{stress:20,cash:-50},g:"",run:()=>{
+        S.flags.beenCaught=false;
+        const pay = S.flags.blamedBack ? rnd(80,180) : rnd(30,90);
+        money(-pay); logit("最後和解在 "+Math.round(pay)+" 萬。你分期付了四年。",null,true)}},
+      {l:"打到底",e:{stress:28,cash:-90,mood:-10},g:"",run:()=>{
+        S.flags.beenCaught=false;
+        if(roll(0.3)){logit("判賠金額砍了一半。但整個過程傳遍了你的公司。","bad",true);money(-rnd(20,60));add("social",-14)}
+        else{money(-rnd(100,260));add("mood",-16);logit("全額判賠，還要負擔訴訟費。","bad",true)}}},
+      {l:"直接付清，不想再拖",e:{stress:-12,mood:-10},g:"",run:()=>{
+        S.flags.beenCaught=false; money(-rnd(90,160));
+        badge("付清了那筆"); logit("你把存款領了一大半，然後把那封信燒掉。",null,true)}}]},
+
+  {id:"thirdSued",w:34,when:()=>S.flags.beenCaught||((S.flags.caught||S.flags.scar)&&S.lover),
+   t:"對方也被告了",
+   dyn:()=>(S.lover?S.lover.name:"那個人")+"傳訊息來，說收到法院的信，問你怎麼辦。",
+   c:[{l:"幫她付",e:{cash:-80,mood:-8,stress:16},g:"",run:()=>{
+        if(S.lover){S.lover.risk+=10;logit("你把錢匯過去。她只回了「謝謝」兩個字。",null,true)}}},
+      {l:"叫她自己處理",e:{mood:-10,stress:10},g:"",run:()=>{
+        if(S.lover){S.lover=null;logit("她封鎖了你。那段關係連結束都沒有說過話。","bad",true)}}},
+      {l:"兩個人一起去談",e:{stress:18,cash:-40,charm:3},g:"",run:()=>{
+        if(roll(0.5))logit("金額談下來了。但你們之後也沒有再見面。");
+        else{add("mood",-12);logit("對方不接受，而且把你們一起去的事也寫進書狀。","bad")}}}]},
+
+  {id:"falseAlarm",w:26,when:()=>S.flags.cleared&&married(),
+   t:"你查過的事，對方知道了",
+   dyn:()=>S.partner.name+"在抽屜裡找到那份徵信社的報告，或是你打聽的紀錄。",
+   c:[{l:"坦白道歉",e:{mood:6,stress:-10},g:"",run:()=>{
+        S.flags.cleared=false;
+        if(roll(0.55)){S.partner.aff=Math.min(100,S.partner.aff+10);logit("他說他懂你為什麼會那樣想。","good",true)}
+        else{S.partner.aff-=22;logit("他說最傷的不是你懷疑，是你用查的。","bad",true)}}},
+      {l:"說是為了保護這個家",e:{mood:-8,stress:14},g:"",run:()=>{S.flags.cleared=false;S.partner.aff-=18}},
+      {l:"反問他心虛什麼",e:{mood:-12,stress:20},g:"",run:()=>{S.flags.cleared=false;S.partner.aff-=30;
+        logit("那天之後，你們開始用吵架來講話。","bad",true)}}]},
+
+  {id:"scarAfter",w:28,when:()=>S.flags.scar&&married()&&S.age<=78,
+   t:"那件事還在屋子裡",d:"你們都不提，但只要對方晚回家十分鐘，空氣就會變。",
+   c:[{l:"去做伴侶諮商",e:{cash:-40,stress:-16,mood:10},g:"",run:()=>{
+        if(roll(0.55)){S.flags.scar=false;S.partner.aff=Math.min(100,S.partner.aff+24);
+          badge("把裂縫補起來了");logit("第八次晤談，你們終於把那件事從頭講完一次。","good",true)}
+        else logit("講了兩次就不去了。有些話還是說不出口。")}},
+      {l:"用時間磨",e:{mood:-5,stress:8},g:"",run:()=>{S.partner.aff+=4;if(chance(0.25)){S.flags.scar=false;logit("幾年之後，那件事就只是一件事了。")}}},
+      {l:"提離婚",e:{mood:-14,stress:-8},g:"",run:()=>{S.flags.scar=false;divorce()}}]},
 
   {id:"caught",w:12,when:()=>married()&&S.age>=30&&S.partner.aff<62,
    t:"你發現了一些訊息",d:"對方的手機在桌上亮了一下，名字你沒看過。",
@@ -2683,6 +2815,102 @@ const CHOICE = [
         setStyle("亮眼","你站在鏡子前面看了很久，然後走出門。"); badge("拿回來了")}},
       {l:"全部捐掉",e:{mood:6,stress:-10},g:"你把箱子送到回收點，心裡乾淨了一點。"},
       {l:"再放回去",e:{mood:-6},g:"你把箱子推回櫃子最裡面。"}]},
+/* ---------- 主動出擊 ---------- */
+  {id:"flirtLearn",w:26,when:()=>S.age>=16&&S.age<=32&&!S.seen.flirtLearn,
+   t:"你想學怎麼讓人喜歡你",
+   dyn:()=>{const w=tgtWord(tgtSex());return "你發現自己在"+w+"面前會變得很奇怪——不是太安靜，就是話太多。";},
+   c:[{l:"請朋友教你怎麼開場",e:{charm:7,social:6,mood:5,stress:4},g:"",run:()=>{
+        logit("你練習了三十次怎麼自然地問一個問題。","good")}},
+      {l:"花錢上「兩性溝通」的課",e:{charm:4,intel:-2,cash:-25,stress:6},g:"",run:()=>{
+        if(roll(0.35)){add("charm",6);add("social",5);logit("講師講的其實是傾聽。你學到的東西比預期多。","good",true)}
+        else{add("mood",-8);S.flags.pua=true;
+          logit("學到一堆話術跟評分系統。你後來才發現那些東西把人當成關卡。","bad",true)}}},
+      {l:"算了，就做自己",e:{mood:8,charm:2,stress:-8},g:"你決定不要為了誰改掉自己講話的方式。"}]},
+
+  {id:"flirtBar",w:26,when:()=>S.age>=20&&S.age<=45&&single(),
+   t:"朋友把你拖去聯誼",
+   dyn:()=>{const sx=tgtSex();return "整桌十二個人，有一個"+tgtWord(sx)+"你從坐下就一直在看"+tgtHe(sx)+"。";},
+   c:[{l:"主動換到旁邊的位置",e:{charm:5,social:6,stress:10},g:"",run:()=>{
+        if(roll((S.st.charm*0.5+S.st.social*0.35)/100)){
+          S.partner=partnerNew(60); add("mood",14);
+          logit("你們聊到最後一攤。散場前交換了聯絡方式。對方叫"+S.partner.name+"。","good",true)}
+        else{add("mood",-8);add("charm",2);logit("你講了一個冷笑話，全桌安靜了兩秒。","bad")}}},
+      {l:"等對方先過來",e:{mood:-4,intel:3},g:"",run:()=>{
+        if(roll(0.25)){S.partner=partnerNew(55);logit(tgtHe(S.partner.sex)+"真的過來了，問你要不要續攤。","good",true)}
+        else logit("沒有人過來。你滑了一整晚的手機。","bad")}},
+      {l:"提早走",e:{mood:3,social:-5,stress:-6},g:"你說你明天要早起。"}]},
+
+  {id:"flirtChase",w:30,when:()=>S.age>=17&&S.age<=42&&single(),
+   t:"你決定要追一個人",
+   dyn:()=>{const sx=tgtSex();return "那個"+tgtWord(sx)+"身邊從來不缺人。你知道機會不大，但你還是想試。";},
+   c:[{l:"每天出現，慢慢變成習慣",e:{charm:4,social:4,stress:12,mood:-3},g:"",run:()=>{
+        if(roll((S.st.charm*0.4+S.st.social*0.3+20)/100)){
+          S.partner=partnerNew(68); add("mood",20); badge("追到了");
+          logit("三個月後"+tgtHe(S.partner.sex)+"說：「其實我早就在等你開口。」","good",true)}
+        else{add("mood",-14);add("intel",4);logit("有一天"+tgtHe(tgtSex())+"很客氣地說，希望你不要再送早餐了。","bad",true)}}},
+      {l:"用力製造偶遇、查行程",e:{stress:18,charm:-3},g:"",run:()=>{
+        if(roll(0.25)){S.partner=partnerNew(52);add("mood",10);logit("你們在一起了，但你一直怕對方發現你做過什麼。","bad",true)}
+        else{add("social",-12);add("mood",-16);S.flags.creep=true;
+          logit("對方的朋友出面跟你說話。那之後整個圈子都知道了。","bad",true)}}},
+      {l:"直接問要不要吃飯",e:{charm:6,mood:4,stress:8},g:"",run:()=>{
+        if(roll((S.st.charm*0.55+S.st.social*0.25)/100)){S.partner=partnerNew(62);add("mood",16);
+          logit("對方說好。那頓飯吃了四個小時。","good",true)}
+        else{add("mood",-9);add("charm",3);logit("對方說最近比較忙。你聽得懂。","bad")}}}]},
+
+  {id:"flirtUse",w:24,when:()=>S.age>=20&&S.age<=50&&S.st.charm>=62&&(atWork()||stageKey()==="uni"),
+   t:"你發現自己可以換到一些東西",
+   dyn:()=>{const sx=tgtSex();return "那個"+tgtWord(sx)+"主管（或教授）對你特別好。你知道只要稍微再笑一下，很多事會容易很多。";},
+   c:[{l:"就用吧，又不犯法",e:{charm:5,stress:10,mood:4},g:"",run:()=>{
+        S.flags.usedCharm=true;
+        if(S.job)S.job.pay=Math.round(S.job.pay*1.12);
+        if(roll(0.5))logit("事情真的變順了。但你開始分不清別人是肯定你還是喜歡你。","bad",true);
+        else{add("social",-14);logit("有人開始在背後說你是靠什麼上來的。","bad",true)}}},
+      {l:"保持距離，靠實力",e:{intel:5,mood:6,stress:8,social:3},g:"",run:()=>{
+        badge("沒有走那條路");
+        if(roll(0.45)){if(S.job)S.job.pay=Math.round(S.job.pay*1.1);logit("慢一點，但那是真的你的。","good")}}},
+      {l:"把界線講明白",e:{charm:4,intel:4,stress:12},g:"",run:()=>{
+        if(roll(0.55))logit("對方愣了一下，之後變得很專業。","good");
+        else{add("mood",-10);S.flags.harassed=true;logit("他說你想太多，然後開始刁你。","bad",true)}}}]},
+
+  {id:"flirtMulti",w:24,when:()=>S.age>=19&&S.age<=40&&single()&&S.st.charm>=60,
+   t:"你同時跟三個人在聊",
+   dyn:()=>{const sx=tgtSex();return "三個都很好。你每天晚上要記得誰是誰，哪一個"+tgtWord(sx)+"喜歡吃什麼。";},
+   c:[{l:"挑一個，認真追",e:{charm:4,mood:10,stress:-8},g:"",run:()=>{
+        S.partner=partnerNew(64);logit("你把另外兩個的訊息回完，然後就不再回了。","good",true)}},
+      {l:"都先維持著",e:{charm:5,social:4,mood:6,stress:16},g:"",run:()=>{
+        if(roll(0.4))logit("你撐住了半年。那半年你很累但也很得意。");
+        else{add("mood",-16);add("social",-12);add("charm",-4);
+          logit("三個人在同一個婚禮上碰到了。","bad",true)}}},
+      {l:"全部講清楚，重新開始",e:{charm:3,intel:5,mood:8,social:4},g:"",run:()=>{badge("誠實的那個")}}]},
+
+  {id:"flirtRe",w:24,when:()=>married()&&(S.age-S.partner.since)>=8&&S.partner.aff<78,
+   t:"你決定重新追自己的另一半",
+   dyn:()=>"你想不起來上一次認真打扮是為了"+S.partner.name+"是什麼時候。",
+   c:[{l:"約一次像第一次那樣的約會",e:{mood:14,charm:5,cash:-20,stress:-12},g:"",run:()=>{
+        S.partner.aff=Math.min(100,S.partner.aff+22); badge("重新追了一次");
+        logit("你訂了很難訂的位子。"+S.partner.name+"笑你幼稚，但笑了一整晚。","good",true)}},
+      {l:"每天做一件小事",e:{mood:10,stress:-10},g:"",run:()=>{S.partner.aff=Math.min(100,S.partner.aff+16)}},
+      {l:"算了，老夫老妻了",e:{mood:-6},g:"",run:()=>{S.partner.aff-=8}}]},
+
+  {id:"flirtPUA",w:22,when:()=>S.flags.pua&&S.age<=45,
+   t:"那套東西開始影響你",d:"你開始把人分等級、計算回訊息的時間、練習「打壓」的話術。",
+   c:[{l:"覺得不對勁，整個刪掉",e:{charm:4,intel:6,mood:10,stress:-10},g:"",run:()=>{
+        S.flags.pua=false; badge("把那套丟了");
+        logit("你退出那些群組。重新學會直接說「我喜歡你」。","good",true)}},
+      {l:"繼續用，而且很有效",e:{charm:7,social:-8,stress:12},g:"",run:()=>{
+        if(roll(0.45)){S.partner=partnerNew(48);logit("你很快就交到對象，但關係總是撐不過一年。","bad",true)}
+        else{add("mood",-12);logit("有人把你的聊天紀錄截圖放上網。","bad",true)}}},
+      {l:"去反省一下自己到底想要什麼",e:{intel:7,mood:8,stress:-12},g:"",run:()=>{S.flags.pua=false}}]},
+
+  {id:"flirtOld",w:22,when:()=>S.age>=55&&single()&&S.st.charm>=50,
+   t:"你發現自己還是會心動",
+   dyn:()=>{const sx=tgtSex();return "社區大學的課上，有一個"+tgtWord(sx)+"每次都坐在你旁邊。";},
+   c:[{l:"主動約喝咖啡",e:{charm:5,mood:14,social:6,stress:8},g:"",run:()=>{
+        if(roll(0.55)){S.partner=partnerNew(62);badge("這個年紀還敢");
+          logit("你們一起走回家，走得很慢。","good",true)}
+        else{add("mood",-6);logit("對方說她已經習慣一個人了。你說你懂。","bad")}}},
+      {l:"換位子坐",e:{mood:-8,stress:6},g:"你覺得自己這個年紀還想這些很好笑。"},
+      {l:"就這樣下去也不錯",e:{mood:9,stress:-8},g:"每週兩次，坐在旁邊就夠了。"}]},
 /* ---------- 手足：一輩子的那個人 ---------- */
   {id:"sibFight",w:15,when:()=>sib()&&S.age>=7&&S.age<=16,
    t:"你跟手足吵了一架",dyn:()=>"為了一件很小的事，你跟"+sibName()+"吵到被爸媽各打一頓。",
@@ -3241,6 +3469,7 @@ function divorce(){
   const n = S.partner.name;
   money(-Math.max(S.money,0)*0.45);
   add("mood",-20); add("stress",18); S.exes++; badge("離過婚");
+  S.flags.caught = false; S.flags.spouseLover = null; S.flags.piDate = false; S.flags.scar = false;
   if (S.flags.fakeMarry){ S.flags.fakeMarry = false; add("mood",26); add("stress",-28); logit("這段婚姻結束的時候，你反而鬆了一口氣。","good"); }
   S.kids.forEach(k => { k.bond -= 12; });
   S.partner = null;
@@ -3519,6 +3748,8 @@ const CAP = {homecome:2,sibCompare:3,sibBorrow:2,sibFight:2,typhoon:3,temple:2,
   nightharass:3,harassWork:2,harassOut:2,therapy:3,witness:3,trapFamily:3,trapRescue:3,
   quitgamble:2,rehab:2,abuseOut:4,affair:2,exposed:2,confess:4,netdate:4,blind:3,office:3,kid:4,
   comeout:3,propose:3,pride:3,gap:2,realize:2,samelaw:1,bidoubt:2,outwork:2,
+  flirtChase:3,flirtBar:3,flirtMulti:2,flirtUse:2,flirtRe:2,flirtOld:2,
+  suspect:2,thirdSued:2,scarAfter:3,
   echoLost:3,oldAlone:2,oldSee:1,sibLate:2,kidBack:2};
 const firedN = id => (S.flags.cnt && S.flags.cnt[id]) || 0;
 const canFire = e => !CAP[e.id] || firedN(e.id) < CAP[e.id];
@@ -3546,7 +3777,8 @@ function weighted(pool){
   return pool[0];
 }
 // 人生主線走自己的通道，不跟其他事件搶，以後再加多少事件都擠不掉
-const CORE = {confess:1,netdate:1,blind:1,office:1,propose:1,kid:1,samekid:1,friend:1,realize:1,comeout:1};
+const CORE = {confess:1,netdate:1,blind:1,office:1,propose:1,kid:1,samekid:1,friend:1,realize:1,comeout:1,
+  flirtChase:1,flirtBar:1,flirtOld:1};
 // 會反覆出現的人：手足、子女、宿敵、恩師、老後，也給一條自己的線
 const THREAD = {sibFight:1,sibCompare:1,sibBorrow:1,sibCare:1,sibLate:1,
   kidExam:1,kidWork:1,kidNest:1,kidWed:1,kidFar:1,kidBack:1,kidart:1,kidleave:1,
@@ -3564,6 +3796,8 @@ const REPEATABLE = {invest:1,scam:1,affair:1,bully:1,picky:1,ex:1,lotto:1,moveci
   comeout:1,pride:1,outwork:1,samekid:1,bidoubt:1,realize:1,
   abuseOut:1,quitgamble:1,rehab:1,cancelled:1,hui:1,dui:1,
   restyle:1,hitOn:1,judged:1,relativeLook:1,luxeTrap:1,luxeFriend:1,sportyPick:1,indieChance:1,
+  flirtChase:1,flirtBar:1,flirtMulti:1,flirtUse:1,flirtRe:1,flirtOld:1,
+  suspect:1,thirdSued:1,scarAfter:1,
   sibCompare:1,sibBorrow:1,kidExam:1,kidWork:1,kidNest:1,kidFar:1,typhoon:1,temple:1,homecome:1,oldStuff:1,rivalWork:1,
   harassWork:1,harassOut:1,nightharass:1,therapy:1,witness:1,
   trapFamily:1,trapRescue:1,trapBoss:1};
@@ -3674,6 +3908,14 @@ function epitaph(){
   if (S.badges["撞傷了人"]) b.push("有一場車禍賠了很多年");
   if (S.badges["離開了"] || S.badges["走出來了"]) b.push("最後把自己撈了回來");
   if (S.badges["拿回來了"]) b.push("後來把自己穿回去了");
+  if (S.badges["追到了"]) b.push("追到過一個以為追不到的人");
+  if (S.badges["重新追了一次"]) b.push("把同一個人追了兩次");
+  if (S.flags.usedCharm) b.push("有些門是用笑容打開的");
+  if (S.badges["這個年紀還敢"]) b.push("老了還心動過");
+  if (S.badges["告贏了"]) b.push("為自己討回過一次公道");
+  if (S.flags.beenCaught || S.badges["付清了那筆"]) b.push("有一扇門被打開過");
+  if (S.badges["把裂縫補起來了"]) b.push("裂過，也補過");
+  if (S.badges["好聚好散"]) b.push("最後是體面地結束的");
   if (S.badges["跟宿敵和解"]) b.push("跟那個人握了手");
   if (S.badges["送了老師一程"] || S.badges["接棒了"]) b.push("把學到的傳下去了");
   if (S.badges["和好了"]) b.push("最後有打那通電話");
